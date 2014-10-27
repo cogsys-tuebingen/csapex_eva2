@@ -33,8 +33,28 @@ void EvaOptimizerAdapter::setupUi(QBoxLayout* layout)
 
     QPushButton* btn_add_param = new QPushButton("+");
     layout->addWidget(btn_add_param);
-
     QObject::connect(btn_add_param, SIGNAL(clicked()), this, SLOT(createParameter()));
+
+
+    QPushButton* btn_start_optimization = new QPushButton("start");
+    layout->addWidget(btn_start_optimization);
+    QObject::connect(btn_start_optimization, SIGNAL(clicked()), this, SLOT(startOptimization()));
+
+
+    QPushButton* btn_stop_optimization = new QPushButton("stop");
+    layout->addWidget(btn_stop_optimization);
+    QObject::connect(btn_stop_optimization, SIGNAL(clicked()), this, SLOT(stopOptimization()));
+}
+
+void EvaOptimizerAdapter::startOptimization()
+{
+    wrapped_->start();
+}
+
+
+void EvaOptimizerAdapter::stopOptimization()
+{
+    wrapped_->stop();
 }
 
 QDialog* EvaOptimizerAdapter::makeTypeDialog()

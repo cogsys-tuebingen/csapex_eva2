@@ -22,6 +22,8 @@ public:
 
 public Q_SLOTS:
     void createParameter();
+    void startOptimization();
+    void stopOptimization();
 
     void setNextParameterType(const QString& type);
 

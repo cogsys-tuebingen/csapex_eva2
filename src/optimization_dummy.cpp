@@ -40,6 +40,8 @@ void OptimizationDummy::process()
     double b = readParameter<double>("b");
     double c = readParameter<double>("c");
 
+    ainfo << "params are a: " << a << ", b: " << b << ", c: " << c << std::endl;
+
     double fitness = std::pow(a-b, 2) + c;
     ainfo << "dummy optimizer: fitness = " << fitness;
 

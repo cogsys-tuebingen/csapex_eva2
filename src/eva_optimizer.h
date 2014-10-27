@@ -13,6 +13,8 @@ namespace csapex {
 
 class EvaOptimizer : public csapex::Node
 {
+    friend class EvaOptimizerAdapter;
+
 public:
     EvaOptimizer();
 
@@ -23,10 +25,15 @@ public:
 
 private:
     void start();
+    void stop();
+
+    YAML::Node makeRequest();
 
 private:
     Input* in_;
     Output* out_;
+
+    bool init_;
 };
 
 
