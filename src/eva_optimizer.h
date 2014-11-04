@@ -1,12 +1,9 @@
 #ifndef EVA_OPTIMIZER_H
 #define EVA_OPTIMIZER_H
 
-/// COMPONENT
-
 /// PROJECT
 #include <csapex/model/node.h>
-
-/// SYSTEM
+#include <utils_jcppsocket/cpp/sync_client.h>
 
 namespace csapex {
 
@@ -24,6 +21,10 @@ public:
     void tick();
 
 private:
+    void tryMakeSocket();
+    void makeSocket();
+
+private:
     void start();
     void stop();
 
@@ -33,7 +34,8 @@ private:
     Input* in_;
     Output* out_;
 
-    bool init_;
+    bool can_read_;
+    utils_jcppsocket::SyncClient::Ptr client_;
 };
 
 

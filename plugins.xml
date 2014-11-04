@@ -5,8 +5,5 @@
 <class type="csapex::EvaOptimizerAdapterBuilder" base_class_type="csapex::NodeAdapterBuilder">
   <description></description>
 </class>
-<class type="csapex::OptimizationDummy" base_class_type="csapex::Node">
-  <description>Dummy to test optimization on</description>
-</class>
 </library>
 

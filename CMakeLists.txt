@@ -2,13 +2,13 @@ cmake_minimum_required(VERSION 2.8.3)
 project(csapex_eva)
 
 find_package(catkin REQUIRED COMPONENTS
-  csapex
+  csapex_optimization utils_jcppsocket
 )
 
 catkin_package(
 #  INCLUDE_DIRS include
-  LIBRARIES csapex_eva
-  CATKIN_DEPENDS csapex
+  LIBRARIES csapex_eva 
+  CATKIN_DEPENDS csapex_optimization
 )
 
 include_directories(
@@ -21,8 +21,6 @@ csapex_moc_all(QT_MOC_PLUG src/*.h)
 add_library(csapex_eva
     src/eva_optimizer.cpp
     src/eva_optimizer_adapter.cpp
-    src/optimization_dummy.cpp
-    src/parameter_dialog.cpp
 
     ${QT_MOC_PLUG}
 )

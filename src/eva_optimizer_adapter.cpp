@@ -2,7 +2,7 @@
 #include "eva_optimizer_adapter.h"
 
 /// COMPONENT
-#include "parameter_dialog.h"
+#include <csapex_optimization/parameter_dialog.h>
 
 /// PROJECT
 #include <csapex/utility/register_node_adapter.h>
