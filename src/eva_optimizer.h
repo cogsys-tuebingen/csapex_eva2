@@ -19,6 +19,7 @@ public:
     void setup();
     void process();
     void tick();
+    bool canTick();
 
 private:
     void tryMakeSocket();

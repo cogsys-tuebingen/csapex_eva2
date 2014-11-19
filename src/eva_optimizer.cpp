@@ -40,15 +40,18 @@ void EvaOptimizer::setup()
     out_ = modifier_->addOutput<AnyMessage>("Trigger");
 
 
-    //    getNodeWorker()->setIsSource(true);
+    getNodeWorker()->setIsSource(true);
     getNodeWorker()->setIsSink(true);
+}
+
+bool EvaOptimizer::canTick()
+{
+    return can_read_;
 }
 
 void EvaOptimizer::tick()
 {
-    if(!can_read_) {
-        return;
-    }
+    assert(can_read_);
 
     // initilization?
     if(!client_) {
@@ -81,11 +84,11 @@ void EvaOptimizer::tick()
             }
 
             if(welcome) {
-                ainfo << "connection established: " << std::string(welcome->begin(), welcome->end()) << std::endl;
+//                ainfo << "connection established: " << std::string(welcome->begin(), welcome->end()) << std::endl;
 
                 // generate request
                 YAML::Node description = makeRequest();
-                ainfo << "optimization request:\n" << description << std::endl;
+//                ainfo << "optimization request:\n" << description << std::endl;
 
                 // send parameter description
                 SocketMsg::Ptr res;
@@ -131,7 +134,7 @@ void EvaOptimizer::tick()
     // continue message?
     VectorMsg<char>::Ptr continue_question = boost::dynamic_pointer_cast<VectorMsg<char> >(res);
     if(continue_question) {
-        ainfo << "continue?" << std::endl;
+//        ainfo << "continue?" << std::endl;
         VectorMsg<char>::Ptr continue_answer(new VectorMsg<char>);
         continue_answer->assign("continue",8);
         client_->write(continue_answer);
@@ -164,7 +167,7 @@ void EvaOptimizer::tick()
         throw std::runtime_error(msg.str());
     }
 
-    ainfo << "got a message with " << values->size() << " doubles" << std::endl;
+//    ainfo << "got a message with " << values->size() << " doubles" << std::endl;
 
     // set parameter values to the values specified by eva
     for(std::size_t i = 0; i < supported_params.size(); ++i) {
@@ -186,7 +189,7 @@ void EvaOptimizer::process()
     }
 
     double fitness = in_->getValue<double>();
-    ainfo << "got fitness: " << fitness << std::endl;
+//    ainfo << "got fitness: " << fitness << std::endl;
 
     // send fitness back to eva
     ValueMsg<double>::Ptr msg(new ValueMsg<double>);
