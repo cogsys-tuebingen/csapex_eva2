@@ -3,7 +3,7 @@
 
 /// PROJECT
 #include <csapex/msg/input.h>
-#include <csapex/msg/output.h>
+#include <csapex/signal/trigger.h>
 #include <csapex/utility/register_apex_plugin.h>
 #include <utils_param/parameter_factory.h>
 #include <csapex/model/node_modifier.h>
@@ -24,7 +24,7 @@ using namespace serialization;
 
 
 EvaOptimizer::EvaOptimizer()
-    : can_read_(true)
+    : can_read_(true), do_optimization_(false)
 {
 }
 
@@ -37,7 +37,7 @@ void EvaOptimizer::setupParameters()
 void EvaOptimizer::setup()
 {
     in_  = modifier_->addInput<double>("Fitness");
-    out_ = modifier_->addOutput<AnyMessage>("Trigger");
+    out_ = modifier_->addTrigger("Evaluate");
 
 
     getNodeWorker()->setIsSource(true);
@@ -46,7 +46,7 @@ void EvaOptimizer::setup()
 
 bool EvaOptimizer::canTick()
 {
-    return can_read_;
+    return can_read_ && do_optimization_;
 }
 
 void EvaOptimizer::tick()
@@ -178,8 +178,7 @@ void EvaOptimizer::tick()
     can_read_ = false;
 
     // start another evaluation
-    AnyMessage::Ptr trigger(new AnyMessage);
-    out_->publish(trigger);
+    out_->trigger();
 }
 
 void EvaOptimizer::process()
@@ -228,14 +227,14 @@ YAML::Node EvaOptimizer::makeRequest()
 void EvaOptimizer::start()
 {
     ainfo << "starting optimization" << std::endl;
-    getNodeWorker()->setTickEnabled(true);
+    do_optimization_ = true;
 }
 
 
 void EvaOptimizer::stop()
 {
     ainfo << "stopping optimization" << std::endl;
-    getNodeWorker()->setTickEnabled(false);
+    do_optimization_ = false;
 }
 
 

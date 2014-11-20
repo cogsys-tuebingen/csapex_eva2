@@ -33,9 +33,10 @@ private:
 
 private:
     Input* in_;
-    Output* out_;
+    Trigger* out_;
 
     bool can_read_;
+    bool do_optimization_;
     utils_jcppsocket::SyncClient::Ptr client_;
 };
 
