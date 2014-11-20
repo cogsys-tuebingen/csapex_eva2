@@ -188,7 +188,7 @@ void EvaOptimizer::process()
     }
 
     double fitness = in_->getValue<double>();
-//    ainfo << "got fitness: " << fitness << std::endl;
+    ainfo << "got fitness: " << fitness << std::endl;
 
     // send fitness back to eva
     ValueMsg<double>::Ptr msg(new ValueMsg<double>);
