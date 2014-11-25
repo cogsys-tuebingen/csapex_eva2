@@ -7,6 +7,9 @@
 /// PROJECT
 #include <csapex/utility/register_node_adapter.h>
 #include <utils_param/range_parameter.h>
+#include <csapex/view/widget_controller.h>
+#include <csapex/view/designer_scene.h>
+#include <utils_param/parameter_factory.h>
 
 /// SYSTEM
 #include <QPushButton>
@@ -14,6 +17,8 @@
 #include <QDialogButtonBox>
 #include <QComboBox>
 #include <QFormLayout>
+#include <QtConcurrentRun>
+#include <QFutureWatcher>
 
 using namespace csapex;
 
@@ -21,7 +26,12 @@ CSAPEX_REGISTER_NODE_ADAPTER(EvaOptimizerAdapter, csapex::EvaOptimizer)
 
 
 EvaOptimizerAdapter::EvaOptimizerAdapter(NodeWorker* worker, EvaOptimizer *node, WidgetController* widget_ctrl)
-    : DefaultNodeAdapter(worker, widget_ctrl), wrapped_(node)
+    : DefaultNodeAdapter(worker, widget_ctrl), wrapped_(node), designer_(widget_ctrl_->getDesignerScene())
+{
+    QObject::connect(&widget_picker_, SIGNAL(widgetPicked()), this, SLOT(widgetPicked()));
+}
+
+EvaOptimizerAdapter::~EvaOptimizerAdapter()
 {
 }
 
@@ -31,9 +41,13 @@ void EvaOptimizerAdapter::setupUi(QBoxLayout* layout)
 {
     DefaultNodeAdapter::setupUi(layout);
 
-    QPushButton* btn_add_param = new QPushButton("+");
+    QPushButton* btn_add_param = new QPushButton("Create Parameter");
     layout->addWidget(btn_add_param);
     QObject::connect(btn_add_param, SIGNAL(clicked()), this, SLOT(createParameter()));
+
+    QPushButton* btn_pick_param = new QPushButton("Pick Parameter");
+    layout->addWidget(btn_pick_param);
+    QObject::connect(btn_pick_param, SIGNAL(clicked()), this, SLOT(pickParameter()));
 
 
     QPushButton* btn_start_optimization = new QPushButton("start");
@@ -93,6 +107,33 @@ void EvaOptimizerAdapter::setNextParameterType(const QString &type)
     next_type_ = type.toStdString();
 }
 
+void EvaOptimizerAdapter::pickParameter()
+{
+    designer_ = widget_ctrl_->getDesignerScene();
+    if(designer_) {
+        widget_picker_.startPicking(designer_);
+    }
+}
+
+void EvaOptimizerAdapter::widgetPicked()
+{
+    QWidget* widget = widget_picker_.getWidget();
+    if(widget) {
+        std::cout << "selected: " << widget->metaObject()->className() << std::endl;
+        QVariant var = widget->property("parameter");
+        if(!var.isNull()) {
+            param::Parameter* p = static_cast<param::Parameter*>(var.value<void*>());
+
+            if(p != NULL) {
+                node_->getNode()->ainfo << "picked parameter " << p->name() << std::endl;
+
+                wrapped_->addPersistentParameter(param::ParameterFactory::clone(p));
+                return;
+            }
+        }
+    }
+    node_->getNode()->ainfo << "no parameter selected" << std::endl;
+}
 
 void EvaOptimizerAdapter::createParameter()
 {

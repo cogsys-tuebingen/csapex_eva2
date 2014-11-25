@@ -3,9 +3,14 @@
 
 /// PROJECT
 #include <csapex/view/default_node_adapter.h>
+#include <csapex/utility/widget_picker.h>
+#include <utils_param/parameter.h>
 
 /// COMPONENT
 #include "eva_optimizer.h"
+
+/// SYSTEM
+#include <QFuture>
 
 class QDialog;
 
@@ -17,10 +22,14 @@ class EvaOptimizerAdapter : public QObject, public DefaultNodeAdapter
 
 public:
     EvaOptimizerAdapter(NodeWorker *worker, EvaOptimizer *node, WidgetController *widget_ctrl);
+    ~EvaOptimizerAdapter();
 
     virtual void setupUi(QBoxLayout* layout);
 
 public Q_SLOTS:
+    void pickParameter();
+    void widgetPicked();
+
     void createParameter();
     void startOptimization();
     void stopOptimization();
@@ -32,6 +41,9 @@ private:
 
 protected:
     EvaOptimizer* wrapped_;
+    DesignerScene* designer_;
+
+    WidgetPicker widget_picker_;
 
     std::string next_type_;
 };
