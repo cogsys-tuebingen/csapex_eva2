@@ -10,6 +10,8 @@
 #include <csapex/view/widget_controller.h>
 #include <csapex/view/designer_scene.h>
 #include <utils_param/parameter_factory.h>
+#include <csapex/command/dispatcher.h>
+#include <csapex/command/add_connection.h>
 
 /// SYSTEM
 #include <QPushButton>
@@ -17,8 +19,6 @@
 #include <QDialogButtonBox>
 #include <QComboBox>
 #include <QFormLayout>
-#include <QtConcurrentRun>
-#include <QFutureWatcher>
 
 using namespace csapex;
 
@@ -119,15 +119,28 @@ void EvaOptimizerAdapter::widgetPicked()
 {
     QWidget* widget = widget_picker_.getWidget();
     if(widget) {
-        std::cout << "selected: " << widget->metaObject()->className() << std::endl;
         QVariant var = widget->property("parameter");
         if(!var.isNull()) {
-            param::Parameter* p = static_cast<param::Parameter*>(var.value<void*>());
+            param::Parameter* connected_parameter = static_cast<param::Parameter*>(var.value<void*>());
 
-            if(p != NULL) {
-                node_->getNode()->ainfo << "picked parameter " << p->name() << std::endl;
+            if(connected_parameter != NULL) {
+                node_->getNode()->ainfo << "picked parameter " << connected_parameter->name()  << " with UUID " << connected_parameter->UUID() << std::endl;
 
-                wrapped_->addPersistentParameter(param::ParameterFactory::clone(p));
+                param::Parameter::Ptr new_parameter = param::ParameterFactory::clone(connected_parameter);
+                wrapped_->addPersistentParameter(new_parameter);
+
+                if(!connected_parameter->isInteractive()) {
+                    connected_parameter->setInteractive(true);
+                }
+                new_parameter->setInteractive(true);
+
+                UUID from = UUID::make_sub_forced(UUID::make_forced(new_parameter->UUID()), std::string("out_") + new_parameter->name());
+                UUID to = UUID::make_sub_forced(UUID::make_forced(connected_parameter->UUID()), std::string("in_") + connected_parameter->name());
+
+                command::AddConnection::Ptr cmd(new command::AddConnection(from, to));
+
+                widget_ctrl_->getCommandDispatcher()->execute(cmd);
+
                 return;
             }
         }

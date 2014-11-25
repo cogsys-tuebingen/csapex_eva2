@@ -9,9 +9,6 @@
 /// COMPONENT
 #include "eva_optimizer.h"
 
-/// SYSTEM
-#include <QFuture>
-
 class QDialog;
 
 namespace csapex {
