@@ -16,13 +16,9 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-csapex_moc_all(QT_MOC_PLUG src/*.h)
-
 add_library(csapex_eva
     src/eva_optimizer.cpp
     src/eva_optimizer_adapter.cpp
-
-    ${QT_MOC_PLUG}
 )
 
 target_link_libraries(csapex_eva
