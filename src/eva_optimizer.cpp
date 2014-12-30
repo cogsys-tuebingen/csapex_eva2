@@ -7,7 +7,6 @@
 #include <csapex/utility/register_apex_plugin.h>
 #include <utils_param/parameter_factory.h>
 #include <csapex/model/node_modifier.h>
-#include <csapex/model/node_worker.h>
 #include <utils_param/range_parameter.h>
 #include <utils_jcppsocket/cpp/socket_msgs.h>
 
@@ -40,8 +39,8 @@ void EvaOptimizer::setup()
     out_ = modifier_->addTrigger("Evaluate");
 
 
-    getNodeWorker()->setIsSource(true);
-    getNodeWorker()->setIsSink(true);
+    modifier_->setIsSource(true);
+    modifier_->setIsSink(true);
 }
 
 bool EvaOptimizer::canTick()
