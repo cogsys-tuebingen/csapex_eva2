@@ -123,7 +123,7 @@ void EvaOptimizerAdapter::widgetPicked()
         if(!var.isNull()) {
             param::Parameter* connected_parameter = static_cast<param::Parameter*>(var.value<void*>());
 
-            if(connected_parameter != NULL) {
+            if(connected_parameter != nullptr) {
                 node_->getNode()->ainfo << "picked parameter " << connected_parameter->name()  << " with UUID " << connected_parameter->UUID() << std::endl;
 
                 param::Parameter::Ptr new_parameter = param::ParameterFactory::clone(connected_parameter);
