@@ -31,6 +31,7 @@ void EvaOptimizer::setupParameters()
 {
     addParameter(param::ParameterFactory::declareText("server name", "localhost"));
     addParameter(param::ParameterFactory::declareText("server port", "2342"));
+    addParameter(param::ParameterFactory::declareText("method", "default"));
 }
 
 void EvaOptimizer::setup()
@@ -202,7 +203,7 @@ YAML::Node EvaOptimizer::makeRequest()
     YAML::Node req;
     // TODO: make parameter
     // TODO: define which are possible
-    req["method"] = "HillClimbing";
+    req["method"] = readParameter<std::string>("method");
 
     foreach(param::Parameter::Ptr p, getParameters()) {
         // TODO: support more than double ranges
