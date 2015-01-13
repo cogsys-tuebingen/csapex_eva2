@@ -153,7 +153,7 @@ void EvaOptimizer::tick()
     std::vector<param::Parameter::Ptr> supported_params;
     foreach(param::Parameter::Ptr p, getParameters()) {
         // TODO: support more than double ranges
-        param::RangeParameter::Ptr dbl_range = boost::dynamic_pointer_cast<param::RangeParameter>(p);
+        param::RangeParameter::Ptr dbl_range = std::dynamic_pointer_cast<param::RangeParameter>(p);
         if(!dbl_range || !dbl_range->is<double>()) {
             continue;
         }
@@ -207,7 +207,7 @@ YAML::Node EvaOptimizer::makeRequest()
 
     foreach(param::Parameter::Ptr p, getParameters()) {
         // TODO: support more than double ranges
-        param::RangeParameter::Ptr dbl_range = boost::dynamic_pointer_cast<param::RangeParameter>(p);
+        param::RangeParameter::Ptr dbl_range = std::dynamic_pointer_cast<param::RangeParameter>(p);
         if(!dbl_range || !dbl_range->is<double>()) {
             continue;
         }
