@@ -72,8 +72,8 @@ void EvaOptimizer::tick()
         // connect to eva
         SocketMsg::Ptr res;
         if(client_->read(res)) {
-            ErrorMsg::Ptr err = boost::dynamic_pointer_cast<ErrorMsg>(res);
-            VectorMsg<char>::Ptr welcome = boost::dynamic_pointer_cast<VectorMsg<char> >(res);
+            ErrorMsg::Ptr err = std::dynamic_pointer_cast<ErrorMsg>(res);
+            VectorMsg<char>::Ptr welcome = std::dynamic_pointer_cast<VectorMsg<char> >(res);
 
             if(err) {
                 client_.reset();
@@ -122,7 +122,7 @@ void EvaOptimizer::tick()
         throw std::runtime_error("could not read");
     }
 
-    ErrorMsg::Ptr err = boost::dynamic_pointer_cast<ErrorMsg>(res);
+    ErrorMsg::Ptr err = std::dynamic_pointer_cast<ErrorMsg>(res);
     if(err) {
         client_.reset();
 
@@ -132,7 +132,7 @@ void EvaOptimizer::tick()
     }
 
     // continue message?
-    VectorMsg<char>::Ptr continue_question = boost::dynamic_pointer_cast<VectorMsg<char> >(res);
+    VectorMsg<char>::Ptr continue_question = std::dynamic_pointer_cast<VectorMsg<char> >(res);
     if(continue_question) {
 //        ainfo << "continue?" << std::endl;
         VectorMsg<char>::Ptr continue_answer(new VectorMsg<char>);
@@ -144,7 +144,7 @@ void EvaOptimizer::tick()
 
 
     // read a set of parameters
-    VectorMsg<double>::Ptr values = boost::dynamic_pointer_cast<VectorMsg<double> >(res);
+    VectorMsg<double>::Ptr values = std::dynamic_pointer_cast<VectorMsg<double> >(res);
     if(!values) {
         client_.reset();
         throw std::runtime_error("didn't get parameters");
