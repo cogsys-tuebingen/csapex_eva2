@@ -6,8 +6,6 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 catkin_package(
-#  INCLUDE_DIRS include
-  LIBRARIES csapex_eva 
   CATKIN_DEPENDS csapex_optimization
 )
 
