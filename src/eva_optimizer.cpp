@@ -2,7 +2,7 @@
 #include "eva_optimizer.h"
 
 /// PROJECT
-#include <csapex/msg/input.h>
+#include <csapex/msg/io.h>
 #include <csapex/signal/trigger.h>
 #include <csapex/utility/register_apex_plugin.h>
 #include <utils_param/parameter_factory.h>
@@ -58,7 +58,7 @@ void EvaOptimizer::tick()
         tryMakeSocket();
 
         if(!client_) {
-            setError(true, "no client", EL_ERROR);
+            modifier_->setError("no client");
             return;
         }
 
@@ -187,7 +187,7 @@ void EvaOptimizer::process()
         return;
     }
 
-    double fitness = in_->getValue<double>();
+    double fitness = msg::getValue<double>(in_);
     ainfo << "got fitness: " << fitness << std::endl;
 
     // send fitness back to eva
@@ -256,5 +256,5 @@ void EvaOptimizer::makeSocket()
 
     client_.reset(new utils_jcppsocket::SyncClient(str_name, port));
 
-    setError(false);
+    modifier_->setNoError();
 }
