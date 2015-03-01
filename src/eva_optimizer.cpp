@@ -27,17 +27,17 @@ EvaOptimizer::EvaOptimizer()
 {
 }
 
-void EvaOptimizer::setupParameters()
+void EvaOptimizer::setupParameters(Parameterizable& parameters)
 {
-    addParameter(param::ParameterFactory::declareText("server name", "localhost"));
-    addParameter(param::ParameterFactory::declareText("server port", "2342"));
-    addParameter(param::ParameterFactory::declareText("method", "default"));
+    parameters.addParameter(param::ParameterFactory::declareText("server name", "localhost"));
+    parameters.addParameter(param::ParameterFactory::declareText("server port", "2342"));
+    parameters.addParameter(param::ParameterFactory::declareText("method", "default"));
 }
 
-void EvaOptimizer::setup()
+void EvaOptimizer::setup(NodeModifier& node_modifier)
 {
-    in_  = modifier_->addInput<double>("Fitness");
-    out_ = modifier_->addTrigger("Evaluate");
+    in_  = node_modifier.addInput<double>("Fitness");
+    out_ = node_modifier.addTrigger("Evaluate");
 
 
     modifier_->setIsSource(true);

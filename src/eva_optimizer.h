@@ -15,9 +15,9 @@ class EvaOptimizer : public csapex::Node
 public:
     EvaOptimizer();
 
-    void setupParameters();
-    void setup();
-    void process();
+    void setupParameters(Parameterizable& parameters);
+    void setup(csapex::NodeModifier& node_modifier) override;
+    virtual void process() override;
     void tick();
     bool canTick();
 
