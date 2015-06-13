@@ -25,7 +25,7 @@ using namespace csapex;
 CSAPEX_REGISTER_NODE_ADAPTER(EvaOptimizerAdapter, csapex::EvaOptimizer)
 
 
-EvaOptimizerAdapter::EvaOptimizerAdapter(NodeWorker* worker, EvaOptimizer *node, WidgetController* widget_ctrl)
+EvaOptimizerAdapter::EvaOptimizerAdapter(NodeWorkerWeakPtr worker, EvaOptimizer *node, WidgetController* widget_ctrl)
     : DefaultNodeAdapter(worker, widget_ctrl), wrapped_(node), designer_(widget_ctrl_->getDesignerScene())
 {
     QObject::connect(&widget_picker_, SIGNAL(widgetPicked()), this, SLOT(widgetPicked()));
@@ -117,6 +117,11 @@ void EvaOptimizerAdapter::pickParameter()
 
 void EvaOptimizerAdapter::widgetPicked()
 {
+    NodeWorkerPtr node = node_.lock();
+    if(!node) {
+        return;
+    }
+
     QWidget* widget = widget_picker_.getWidget();
     if(widget) {
         QVariant var = widget->property("parameter");
@@ -124,7 +129,7 @@ void EvaOptimizerAdapter::widgetPicked()
             param::Parameter* connected_parameter = static_cast<param::Parameter*>(var.value<void*>());
 
             if(connected_parameter != nullptr) {
-                node_->getNode()->ainfo << "picked parameter " << connected_parameter->name()  << " with UUID " << connected_parameter->UUID() << std::endl;
+                node->getNode()->ainfo << "picked parameter " << connected_parameter->name()  << " with UUID " << connected_parameter->UUID() << std::endl;
 
                 param::Parameter::Ptr new_parameter = param::ParameterFactory::clone(connected_parameter);
                 wrapped_->addPersistentParameter(new_parameter);
@@ -145,7 +150,7 @@ void EvaOptimizerAdapter::widgetPicked()
             }
         }
     }
-    node_->getNode()->ainfo << "no parameter selected" << std::endl;
+    node->getNode()->ainfo << "no parameter selected" << std::endl;
 }
 
 void EvaOptimizerAdapter::createParameter()
