@@ -18,7 +18,7 @@ class EvaOptimizerAdapter : public QObject, public DefaultNodeAdapter
     Q_OBJECT
 
 public:
-    EvaOptimizerAdapter(NodeWorkerWeakPtr worker, EvaOptimizer *node, WidgetController *widget_ctrl);
+    EvaOptimizerAdapter(NodeWorkerWeakPtr worker, std::weak_ptr<EvaOptimizer> node, WidgetController *widget_ctrl);
     ~EvaOptimizerAdapter();
 
     virtual void setupUi(QBoxLayout* layout);
@@ -37,7 +37,7 @@ private:
     QDialog* makeTypeDialog();
 
 protected:
-    EvaOptimizer* wrapped_;
+    std::weak_ptr<EvaOptimizer> wrapped_;
     DesignerScene* designer_;
 
     WidgetPicker widget_picker_;

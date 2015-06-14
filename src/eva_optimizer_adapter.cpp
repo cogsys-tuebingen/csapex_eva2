@@ -25,7 +25,7 @@ using namespace csapex;
 CSAPEX_REGISTER_NODE_ADAPTER(EvaOptimizerAdapter, csapex::EvaOptimizer)
 
 
-EvaOptimizerAdapter::EvaOptimizerAdapter(NodeWorkerWeakPtr worker, EvaOptimizer *node, WidgetController* widget_ctrl)
+EvaOptimizerAdapter::EvaOptimizerAdapter(NodeWorkerWeakPtr worker, std::weak_ptr<EvaOptimizer> node, WidgetController* widget_ctrl)
     : DefaultNodeAdapter(worker, widget_ctrl), wrapped_(node), designer_(widget_ctrl_->getDesignerScene())
 {
     QObject::connect(&widget_picker_, SIGNAL(widgetPicked()), this, SLOT(widgetPicked()));
@@ -62,13 +62,21 @@ void EvaOptimizerAdapter::setupUi(QBoxLayout* layout)
 
 void EvaOptimizerAdapter::startOptimization()
 {
-    wrapped_->start();
+    auto node = wrapped_.lock();
+    if(!node) {
+        return;
+    }
+    node->start();
 }
 
 
 void EvaOptimizerAdapter::stopOptimization()
 {
-    wrapped_->stop();
+    auto node = wrapped_.lock();
+    if(!node) {
+        return;
+    }
+    node->stop();
 }
 
 QDialog* EvaOptimizerAdapter::makeTypeDialog()
@@ -117,7 +125,7 @@ void EvaOptimizerAdapter::pickParameter()
 
 void EvaOptimizerAdapter::widgetPicked()
 {
-    NodeWorkerPtr node = node_.lock();
+    auto node = wrapped_.lock();
     if(!node) {
         return;
     }
@@ -129,10 +137,10 @@ void EvaOptimizerAdapter::widgetPicked()
             param::Parameter* connected_parameter = static_cast<param::Parameter*>(var.value<void*>());
 
             if(connected_parameter != nullptr) {
-                node->getNode()->ainfo << "picked parameter " << connected_parameter->name()  << " with UUID " << connected_parameter->UUID() << std::endl;
+                node->ainfo << "picked parameter " << connected_parameter->name()  << " with UUID " << connected_parameter->UUID() << std::endl;
 
                 param::Parameter::Ptr new_parameter = param::ParameterFactory::clone(connected_parameter);
-                wrapped_->addPersistentParameter(new_parameter);
+                node->addPersistentParameter(new_parameter);
 
                 if(!connected_parameter->isInteractive()) {
                     connected_parameter->setInteractive(true);
@@ -150,18 +158,22 @@ void EvaOptimizerAdapter::widgetPicked()
             }
         }
     }
-    node->getNode()->ainfo << "no parameter selected" << std::endl;
+    node->ainfo << "no parameter selected" << std::endl;
 }
 
 void EvaOptimizerAdapter::createParameter()
 {
+    auto node = wrapped_.lock();
+    if(!node) {
+        return;
+    }
     QDialog* type_dialog = makeTypeDialog();
     if(type_dialog->exec() == QDialog::Accepted) {
 
         ParameterDialog diag(next_type_);
         if(diag.exec() == QDialog::Accepted) {
             param::Parameter::Ptr param = diag.getParameter();
-            wrapped_->addPersistentParameter(param);
+            node->addPersistentParameter(param);
         }
     }
 }
