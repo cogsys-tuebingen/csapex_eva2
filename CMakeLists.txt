@@ -5,6 +5,10 @@ find_package(catkin REQUIRED COMPONENTS
   csapex_optimization utils_jcppsocket
 )
 
+find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
+
+set(CMAKE_AUTOMOC ON)
+
 catkin_package(
   CATKIN_DEPENDS csapex_optimization
 )
