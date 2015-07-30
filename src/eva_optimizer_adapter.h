@@ -28,8 +28,6 @@ public Q_SLOTS:
     void widgetPicked();
 
     void createParameter();
-    void startOptimization();
-    void stopOptimization();
 
     void setNextParameterType(const QString& type);
 

@@ -29,13 +29,17 @@ private:
     void start();
     void stop();
 
+    void finish();
+
     YAML::Node makeRequest();
+    void handleEvaResponse();
 
 private:
-    Input* in_;
-    Trigger* out_;
+    Input* in_fitness_;
+    Trigger* trigger_start_evaluation_;
 
-    bool can_read_;
+    double fitness_;
+    bool must_reinitialize_;
     bool do_optimization_;
     utils_jcppsocket::SyncClient::Ptr client_;
 };

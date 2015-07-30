@@ -48,35 +48,6 @@ void EvaOptimizerAdapter::setupUi(QBoxLayout* layout)
     QPushButton* btn_pick_param = new QPushButton("Pick Parameter");
     layout->addWidget(btn_pick_param);
     QObject::connect(btn_pick_param, SIGNAL(clicked()), this, SLOT(pickParameter()));
-
-
-    QPushButton* btn_start_optimization = new QPushButton("start");
-    layout->addWidget(btn_start_optimization);
-    QObject::connect(btn_start_optimization, SIGNAL(clicked()), this, SLOT(startOptimization()));
-
-
-    QPushButton* btn_stop_optimization = new QPushButton("stop");
-    layout->addWidget(btn_stop_optimization);
-    QObject::connect(btn_stop_optimization, SIGNAL(clicked()), this, SLOT(stopOptimization()));
-}
-
-void EvaOptimizerAdapter::startOptimization()
-{
-    auto node = wrapped_.lock();
-    if(!node) {
-        return;
-    }
-    node->start();
-}
-
-
-void EvaOptimizerAdapter::stopOptimization()
-{
-    auto node = wrapped_.lock();
-    if(!node) {
-        return;
-    }
-    node->stop();
 }
 
 QDialog* EvaOptimizerAdapter::makeTypeDialog()
@@ -132,6 +103,10 @@ void EvaOptimizerAdapter::widgetPicked()
 
     QWidget* widget = widget_picker_.getWidget();
     if(widget) {
+        if(widget != nullptr) {
+            std::cerr << "picked widget " << widget->metaObject()->className() << std::endl;
+        }
+
         QVariant var = widget->property("parameter");
         if(!var.isNull()) {
             param::Parameter* connected_parameter = static_cast<param::Parameter*>(var.value<void*>());
@@ -154,11 +129,15 @@ void EvaOptimizerAdapter::widgetPicked()
 
                 widget_ctrl_->getCommandDispatcher()->execute(cmd);
 
-                return;
+            } else {
+                node->ainfo << "no parameter selected" << std::endl;
             }
+        } else {
+            node->ainfo << "widget has no parameter property" << std::endl;
         }
+    } else {
+        node->ainfo << "no widget selected" << std::endl;
     }
-    node->ainfo << "no parameter selected" << std::endl;
 }
 
 void EvaOptimizerAdapter::createParameter()
