@@ -2,24 +2,24 @@
 #define EVA_OPTIMIZER_H
 
 /// PROJECT
-#include <csapex/model/node.h>
+#include <csapex/model/tickable_node.h>
 #include <utils_jcppsocket/cpp/sync_client.h>
 
 namespace csapex {
 
 
-class EvaOptimizer : public csapex::Node
+class EvaOptimizer : public csapex::TickableNode
 {
     friend class EvaOptimizerAdapter;
 
 public:
     EvaOptimizer();
 
-    void setupParameters(Parameterizable& parameters);
-    void setup(csapex::NodeModifier& node_modifier) override;
+    virtual void setupParameters(Parameterizable& parameters) override;
+    virtual void setup(csapex::NodeModifier& node_modifier) override;
     virtual void process() override;
-    void tick();
-    bool canTick();
+    virtual void tick() override;
+    virtual bool canTick() override;
 
 private:
     void tryMakeSocket();
