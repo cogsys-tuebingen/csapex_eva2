@@ -7,11 +7,10 @@
 /// PROJECT
 #include <csapex/utility/register_node_adapter.h>
 #include <utils_param/range_parameter.h>
-#include <csapex/view/widget_controller.h>
-#include <csapex/view/designer_scene.h>
 #include <utils_param/parameter_factory.h>
 #include <csapex/command/dispatcher.h>
 #include <csapex/command/add_connection.h>
+#include <csapex/view/designer/widget_controller.h>
 
 /// SYSTEM
 #include <QPushButton>

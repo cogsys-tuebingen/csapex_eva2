@@ -2,8 +2,8 @@
 #define EVA_OPTIMIZER_ADAPTER_H
 
 /// PROJECT
-#include <csapex/view/default_node_adapter.h>
-#include <csapex/utility/widget_picker.h>
+#include <csapex/view/node/default_node_adapter.h>
+#include <csapex/view/utility/widget_picker.h>
 #include <utils_param/parameter.h>
 
 /// COMPONENT
