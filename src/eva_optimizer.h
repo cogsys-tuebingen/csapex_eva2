@@ -2,6 +2,8 @@
 #define EVA_OPTIMIZER_H
 
 /// PROJECT
+#include <csapex/msg/msg_fwd.h>
+#include <csapex/signal/signal_fwd.h>
 #include <csapex/model/tickable_node.h>
 #include <utils_jcppsocket/cpp/sync_client.h>
 
