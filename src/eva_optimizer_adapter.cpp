@@ -6,8 +6,8 @@
 
 /// PROJECT
 #include <csapex/view/utility/register_node_adapter.h>
-#include <utils_param/range_parameter.h>
-#include <utils_param/parameter_factory.h>
+#include <csapex/param/range_parameter.h>
+#include <csapex/param/parameter_factory.h>
 #include <csapex/command/dispatcher.h>
 #include <csapex/command/add_connection.h>
 #include <csapex/view/designer/widget_controller.h>
