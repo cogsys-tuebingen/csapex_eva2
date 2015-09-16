@@ -30,17 +30,17 @@ EvaOptimizer::EvaOptimizer()
 
 void EvaOptimizer::setupParameters(Parameterizable& parameters)
 {
-    parameters.addParameter(param::ParameterFactory::declareText("server name", "localhost"));
-    parameters.addParameter(param::ParameterFactory::declareText("server port", "2342"));
-    parameters.addParameter(param::ParameterFactory::declareText("method", "default"));
+    parameters.addParameter(csapex::param::ParameterFactory::declareText("server name", "localhost"));
+    parameters.addParameter(csapex::param::ParameterFactory::declareText("server port", "2342"));
+    parameters.addParameter(csapex::param::ParameterFactory::declareText("method", "default"));
 
-    parameters.addParameter(param::ParameterFactory::declareTrigger("start"), [this](param::Parameter*) {
+    parameters.addParameter(csapex::param::ParameterFactory::declareTrigger("start"), [this](csapex::param::Parameter*) {
         start();
     });
-    parameters.addParameter(param::ParameterFactory::declareTrigger("finish"), [this](param::Parameter*) {
+    parameters.addParameter(csapex::param::ParameterFactory::declareTrigger("finish"), [this](csapex::param::Parameter*) {
         finish();
     });
-    parameters.addParameter(param::ParameterFactory::declareTrigger("stop"), [this](param::Parameter*) {
+    parameters.addParameter(csapex::param::ParameterFactory::declareTrigger("stop"), [this](csapex::param::Parameter*) {
         stop();
     });
 }
@@ -174,8 +174,8 @@ void EvaOptimizer::handleEvaResponse()
         throw std::runtime_error("didn't get parameters");
     }
 
-    std::vector<param::Parameter::Ptr> supported_params;
-    for(param::Parameter::Ptr p : getParameters()) {
+    std::vector<csapex::param::Parameter::Ptr> supported_params;
+    for(csapex::param::Parameter::Ptr p : getParameters()) {
         // TODO: support more types
         param::RangeParameter::Ptr range = std::dynamic_pointer_cast<param::RangeParameter>(p);
         if(range) {
@@ -206,7 +206,7 @@ void EvaOptimizer::handleEvaResponse()
 
     // set parameter values to the values specified by eva
     for(std::size_t i = 0; i < supported_params.size(); ++i) {
-        param::Parameter::Ptr p = supported_params[i];
+        csapex::param::Parameter::Ptr p = supported_params[i];
 
         param::IntervalParameter::Ptr interval = std::dynamic_pointer_cast<param::IntervalParameter>(p);
         if(interval) {
@@ -264,7 +264,7 @@ YAML::Node EvaOptimizer::makeRequest()
     // TODO: define which are possible
     req["method"] = readParameter<std::string>("method");
 
-    for(param::Parameter::Ptr p : getParameters()) {
+    for(csapex::param::Parameter::Ptr p : getParameters()) {
         param::RangeParameter::Ptr range = std::dynamic_pointer_cast<param::RangeParameter>(p);
         if(range) {
             if(range->is<double>()) {

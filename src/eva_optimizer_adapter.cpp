@@ -108,12 +108,12 @@ void EvaOptimizerAdapter::widgetPicked()
 
         QVariant var = widget->property("parameter");
         if(!var.isNull()) {
-            param::Parameter* connected_parameter = static_cast<param::Parameter*>(var.value<void*>());
+            csapex::param::Parameter* connected_parameter = static_cast<csapex::param::Parameter*>(var.value<void*>());
 
             if(connected_parameter != nullptr) {
                 node->ainfo << "picked parameter " << connected_parameter->name()  << " with UUID " << connected_parameter->UUID() << std::endl;
 
-                param::Parameter::Ptr new_parameter = param::ParameterFactory::clone(connected_parameter);
+                csapex::param::Parameter::Ptr new_parameter = csapex::param::ParameterFactory::clone(connected_parameter);
                 node->addPersistentParameter(new_parameter);
 
                 if(!connected_parameter->isInteractive()) {
@@ -150,7 +150,7 @@ void EvaOptimizerAdapter::createParameter()
 
         ParameterDialog diag(next_type_);
         if(diag.exec() == QDialog::Accepted) {
-            param::Parameter::Ptr param = diag.getParameter();
+            csapex::param::Parameter::Ptr param = diag.getParameter();
             node->addPersistentParameter(param);
         }
     }
