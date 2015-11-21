@@ -9,7 +9,7 @@
 #include <csapex/param/range_parameter.h>
 #include <csapex/param/parameter_factory.h>
 #include <csapex/command/dispatcher.h>
-#include <csapex/command/add_connection.h>
+#include <csapex/command/add_msg_connection.h>
 #include <csapex/view/designer/widget_controller.h>
 
 /// SYSTEM
@@ -124,7 +124,7 @@ void EvaOptimizerAdapter::widgetPicked()
                 UUID from = UUID::make_sub_forced(UUID::make_forced(new_parameter->UUID()), std::string("out_") + new_parameter->name());
                 UUID to = UUID::make_sub_forced(UUID::make_forced(connected_parameter->UUID()), std::string("in_") + connected_parameter->name());
 
-                command::AddConnection::Ptr cmd(new command::AddConnection(from, to));
+                command::AddMessageConnection::Ptr cmd(new command::AddMessageConnection(from, to));
 
                 widget_ctrl_->getCommandDispatcher()->execute(cmd);
 
