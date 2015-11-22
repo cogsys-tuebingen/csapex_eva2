@@ -24,7 +24,9 @@ using namespace serialization;
 
 
 EvaOptimizer::EvaOptimizer()
-    : must_reinitialize_(true), do_optimization_(false)
+    : last_fitness_(std::numeric_limits<double>::infinity()),
+      best_fitness_(std::numeric_limits<double>::infinity()),
+      must_reinitialize_(true), do_optimization_(false)
 {
 }
 
@@ -48,6 +50,8 @@ void EvaOptimizer::setupParameters(Parameterizable& parameters)
 void EvaOptimizer::setup(NodeModifier& node_modifier)
 {
     in_fitness_  = node_modifier.addInput<double>("Fitness");
+    out_last_fitness_  = node_modifier.addOutput<double>("Last Fitness");
+    out_best_fitness_  = node_modifier.addOutput<double>("Best Fitness");
     trigger_start_evaluation_ = node_modifier.addTrigger("Evaluate");
 
 
@@ -62,7 +66,7 @@ bool EvaOptimizer::canTick()
 
 void EvaOptimizer::tick()
 {
-    assert(must_reinitialize_);
+   // assert(must_reinitialize_);
 
     // initilization?
     if(!client_) {
@@ -239,6 +243,13 @@ void EvaOptimizer::process()
         return;
     }
     fitness_ = msg::getValue<double>(in_fitness_);
+
+    if(best_fitness_ != std::numeric_limits<double>::infinity()) {
+        msg::publish(out_best_fitness_, best_fitness_);
+    }
+    if(last_fitness_ != std::numeric_limits<double>::infinity()) {
+        msg::publish(out_last_fitness_, last_fitness_);
+    }
 }
 
 void EvaOptimizer::finish()
@@ -248,6 +259,14 @@ void EvaOptimizer::finish()
     }
 
     ainfo << "got fitness: " << fitness_ << std::endl;
+
+    last_fitness_ = fitness_;
+
+    if(fitness_ < best_fitness_) {
+        best_fitness_ = fitness_;
+        // TODO: save parameters
+    }
+
 
     // send fitness back to eva
     ValueMsg<double>::Ptr msg(new ValueMsg<double>);

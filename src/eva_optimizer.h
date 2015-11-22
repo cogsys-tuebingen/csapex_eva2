@@ -38,9 +38,14 @@ private:
 
 private:
     Input* in_fitness_;
+    Output* out_last_fitness_;
+    Output* out_best_fitness_;
     Trigger* trigger_start_evaluation_;
 
     double fitness_;
+    double last_fitness_;
+    double best_fitness_;
+
     bool must_reinitialize_;
     bool do_optimization_;
     utils_jcppsocket::SyncClient::Ptr client_;
