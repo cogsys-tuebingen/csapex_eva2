@@ -18,7 +18,7 @@ class EvaOptimizerAdapter : public QObject, public DefaultNodeAdapter
     Q_OBJECT
 
 public:
-    EvaOptimizerAdapter(NodeWorkerWeakPtr worker, std::weak_ptr<EvaOptimizer> node, WidgetController *widget_ctrl);
+    EvaOptimizerAdapter(NodeHandleWeakPtr worker, std::weak_ptr<EvaOptimizer> node, WidgetController *widget_ctrl);
     ~EvaOptimizerAdapter();
 
     virtual void setupUi(QBoxLayout* layout);
