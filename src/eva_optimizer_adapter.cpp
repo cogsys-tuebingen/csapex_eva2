@@ -10,6 +10,7 @@
 #include <csapex/param/parameter_factory.h>
 #include <csapex/command/dispatcher.h>
 #include <csapex/command/add_msg_connection.h>
+#include <csapex/utility/uuid_provider.h>
 #include <csapex/view/designer/widget_controller.h>
 
 /// SYSTEM
@@ -111,7 +112,7 @@ void EvaOptimizerAdapter::widgetPicked()
             csapex::param::Parameter* connected_parameter = static_cast<csapex::param::Parameter*>(var.value<void*>());
 
             if(connected_parameter != nullptr) {
-                node->ainfo << "picked parameter " << connected_parameter->name()  << " with UUID " << connected_parameter->UUID() << std::endl;
+                node->ainfo << "picked parameter " << connected_parameter->name()  << " with UUID " << connected_parameter->getUUID() << std::endl;
 
                 csapex::param::Parameter::Ptr new_parameter = csapex::param::ParameterFactory::clone(connected_parameter);
                 node->addPersistentParameter(new_parameter);
@@ -121,8 +122,10 @@ void EvaOptimizerAdapter::widgetPicked()
                 }
                 new_parameter->setInteractive(true);
 
-                UUID from = UUID::make_sub_forced(UUID::make_forced(new_parameter->UUID()), std::string("out_") + new_parameter->name());
-                UUID to = UUID::make_sub_forced(UUID::make_forced(connected_parameter->UUID()), std::string("in_") + connected_parameter->name());
+
+
+                UUID from = UUIDProvider::makeDerivedUUID_forced(new_parameter->getUUID(), std::string("out_") + new_parameter->name());
+                UUID to = UUIDProvider::makeDerivedUUID_forced(connected_parameter->getUUID(), std::string("in_") + connected_parameter->name());
 
                 command::AddMessageConnection::Ptr cmd(new command::AddMessageConnection(from, to));
 
