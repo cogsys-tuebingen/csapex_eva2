@@ -25,8 +25,8 @@ using namespace csapex;
 CSAPEX_REGISTER_NODE_ADAPTER(EvaOptimizerAdapter, csapex::EvaOptimizer)
 
 
-EvaOptimizerAdapter::EvaOptimizerAdapter(NodeHandleWeakPtr worker, std::weak_ptr<EvaOptimizer> node, WidgetController* widget_ctrl)
-    : DefaultNodeAdapter(worker, widget_ctrl), wrapped_(node), designer_(widget_ctrl_->getDesignerScene())
+EvaOptimizerAdapter::EvaOptimizerAdapter(NodeHandleWeakPtr worker, NodeBox* parent, std::weak_ptr<EvaOptimizer> node)
+    : DefaultNodeAdapter(worker, parent), wrapped_(node), designer_(widget_ctrl_->getDesignerScene())
 {
     QObject::connect(&widget_picker_, SIGNAL(widgetPicked()), this, SLOT(widgetPicked()));
 }
