@@ -122,8 +122,6 @@ void EvaOptimizerAdapter::widgetPicked()
                 }
                 new_parameter->setInteractive(true);
 
-
-
                 UUID from = UUIDProvider::makeDerivedUUID_forced(new_parameter->getUUID(), std::string("out_") + new_parameter->name());
                 UUID to = UUIDProvider::makeDerivedUUID_forced(connected_parameter->getUUID(), std::string("in_") + connected_parameter->name());
 
