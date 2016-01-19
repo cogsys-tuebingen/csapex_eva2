@@ -55,8 +55,8 @@ void EvaOptimizer::setup(NodeModifier& node_modifier)
     trigger_start_evaluation_ = node_modifier.addTrigger("Evaluate");
 
 
-    modifier_->setIsSource(true);
-    modifier_->setIsSink(true);
+    node_modifier.setIsSource(true);
+    node_modifier.setIsSink(true);
 }
 
 bool EvaOptimizer::canTick()
@@ -73,7 +73,7 @@ void EvaOptimizer::tick()
         tryMakeSocket();
 
         if(!client_) {
-            modifier_->setError("no client");
+            node_modifier_->setError("no client");
             return;
         }
 
@@ -367,5 +367,5 @@ void EvaOptimizer::makeSocket()
 
     client_.reset(new utils_jcppsocket::SyncClient(str_name, port));
 
-    modifier_->setNoError();
+    node_modifier_->setNoError();
 }

@@ -12,6 +12,9 @@
 #include <csapex/command/add_msg_connection.h>
 #include <csapex/utility/uuid_provider.h>
 #include <csapex/view/designer/widget_controller.h>
+#include <csapex/view/node/box.h>
+#include <csapex/view/designer/designer_scene.h>
+#include <csapex/view/designer/graph_view.h>
 
 /// SYSTEM
 #include <QPushButton>
@@ -25,8 +28,8 @@ using namespace csapex;
 CSAPEX_REGISTER_NODE_ADAPTER(EvaOptimizerAdapter, csapex::EvaOptimizer)
 
 
-EvaOptimizerAdapter::EvaOptimizerAdapter(NodeHandleWeakPtr worker, std::weak_ptr<EvaOptimizer> node, WidgetController* widget_ctrl)
-    : DefaultNodeAdapter(worker, widget_ctrl), wrapped_(node), designer_(widget_ctrl_->getDesignerScene())
+EvaOptimizerAdapter::EvaOptimizerAdapter(NodeHandleWeakPtr worker, NodeBox* parent, std::weak_ptr<EvaOptimizer> node)
+    : DefaultNodeAdapter(worker, parent), wrapped_(node), designer_(nullptr)
 {
     QObject::connect(&widget_picker_, SIGNAL(widgetPicked()), this, SLOT(widgetPicked()));
 }
@@ -88,7 +91,7 @@ void EvaOptimizerAdapter::setNextParameterType(const QString &type)
 
 void EvaOptimizerAdapter::pickParameter()
 {
-    designer_ = widget_ctrl_->getDesignerScene();
+    designer_ = parent_->getGraphView()->designerScene();
     if(designer_) {
         widget_picker_.startPicking(designer_);
     }
@@ -127,7 +130,7 @@ void EvaOptimizerAdapter::widgetPicked()
 
                 command::AddMessageConnection::Ptr cmd(new command::AddMessageConnection(from, to));
 
-                widget_ctrl_->getCommandDispatcher()->execute(cmd);
+                executeCommand(cmd);
 
             } else {
                 node->ainfo << "no parameter selected" << std::endl;
