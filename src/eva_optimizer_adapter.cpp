@@ -11,7 +11,6 @@
 #include <csapex/command/dispatcher.h>
 #include <csapex/command/add_msg_connection.h>
 #include <csapex/utility/uuid_provider.h>
-#include <csapex/view/designer/widget_controller.h>
 #include <csapex/view/node/box.h>
 #include <csapex/view/designer/designer_scene.h>
 #include <csapex/view/designer/graph_view.h>
