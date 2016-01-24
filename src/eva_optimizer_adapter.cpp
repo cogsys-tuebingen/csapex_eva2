@@ -14,6 +14,7 @@
 #include <csapex/view/node/box.h>
 #include <csapex/view/designer/designer_scene.h>
 #include <csapex/view/designer/graph_view.h>
+#include <csapex/model/graph_facade.h>
 
 /// SYSTEM
 #include <QPushButton>
@@ -127,7 +128,9 @@ void EvaOptimizerAdapter::widgetPicked()
                 UUID from = UUIDProvider::makeDerivedUUID_forced(new_parameter->getUUID(), std::string("out_") + new_parameter->name());
                 UUID to = UUIDProvider::makeDerivedUUID_forced(connected_parameter->getUUID(), std::string("in_") + connected_parameter->name());
 
-                command::AddMessageConnection::Ptr cmd(new command::AddMessageConnection(from, to));
+                AUUID parent_uuid = parent_->getGraphView()->getGraphFacade()->getAbsoluteUUID();
+
+                command::AddMessageConnection::Ptr cmd(new command::AddMessageConnection(parent_uuid, from, to));
 
                 executeCommand(cmd);
 
