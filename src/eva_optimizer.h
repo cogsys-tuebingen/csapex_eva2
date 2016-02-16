@@ -33,6 +33,9 @@ private:
 
     void finish();
 
+    void setBest();
+    void updateParameters(const utils_jcppsocket::VectorMsg<double>::Ptr& values);
+
     YAML::Node makeRequest();
     void handleEvaResponse();
 
@@ -49,6 +52,10 @@ private:
     bool must_reinitialize_;
     bool do_optimization_;
     utils_jcppsocket::SyncClient::Ptr client_;
+
+
+    utils_jcppsocket::VectorMsg<double>::Ptr current_parameter_set_;
+    utils_jcppsocket::VectorMsg<double>::Ptr best_parameter_set_;
 };
 
 

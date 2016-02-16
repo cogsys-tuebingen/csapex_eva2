@@ -45,6 +45,10 @@ void EvaOptimizer::setupParameters(Parameterizable& parameters)
     parameters.addParameter(csapex::param::ParameterFactory::declareTrigger("stop"), [this](csapex::param::Parameter*) {
         stop();
     });
+    parameters.addParameter(csapex::param::ParameterFactory::declareTrigger("set best"), [this](csapex::param::Parameter*) {
+        stop();
+        setBest();
+    });
 }
 
 void EvaOptimizer::setup(NodeModifier& node_modifier)
@@ -66,19 +70,21 @@ bool EvaOptimizer::canTick()
 
 void EvaOptimizer::tick()
 {
-   // assert(must_reinitialize_);
-
     // initilization?
     if(!client_) {
         tryMakeSocket();
 
         if(!client_) {
+            aerr << "couldn't create client" << std::endl;
             node_modifier_->setError("no client");
             return;
+        } else {
+            ainfo << "client initialized" << std::endl;
         }
 
         if(!client_->isConnected()) {
             if(!client_->connect()) {
+                aerr << "could not connect to EvA2" << std::endl;
                 throw std::runtime_error("Couldn't connect!");
                 client_.reset();
             }
@@ -117,21 +123,85 @@ void EvaOptimizer::tick()
                 client_->write(config);
 
             } else {
+                aerr << "didn't receive a welcome message" << std::endl;
                 client_.reset();
             }
         } else {
+            aerr << "socket error" << std::endl;
             client_.reset();
             throw std::runtime_error("socket error");
         }
     }
 
     if(!client_) {
+        aerr << "connection lost" << std::endl;
         throw std::runtime_error("connection lost");
     }
 
     must_reinitialize_ = false;
 
     handleEvaResponse();
+}
+
+void EvaOptimizer::updateParameters(const utils_jcppsocket::VectorMsg<double>::Ptr& values)
+{
+    if(!values) {
+        return;
+    }
+
+    std::vector<csapex::param::Parameter::Ptr> supported_params;
+
+    for(csapex::param::Parameter::Ptr p : getParameters()) {
+        // TODO: support more types
+        param::RangeParameter::Ptr range = std::dynamic_pointer_cast<param::RangeParameter>(p);
+        if(range) {
+            if(range->is<double>()) {
+                supported_params.push_back(p);
+
+            } else if(range->is<int>()) {
+                supported_params.push_back(p);
+            }
+        }
+
+        param::IntervalParameter::Ptr interval = std::dynamic_pointer_cast<param::IntervalParameter>(p);
+        if(interval && interval->is<std::pair<int, int>>()) {
+            supported_params.push_back(p);
+            supported_params.push_back(p);
+        }
+    }
+
+    if(values->size() != supported_params.size()) {
+        client_.reset();
+        must_reinitialize_ = true;
+        std::stringstream msg;
+        msg << "number of parameters is wrong: " << values->size() << " vs. " << supported_params.size() << std::endl;
+        throw std::runtime_error(msg.str());
+    }
+
+    // set parameter values to the values specified by eva
+    for(std::size_t i = 0; i < supported_params.size(); ++i) {
+        csapex::param::Parameter::Ptr p = supported_params[i];
+
+        param::IntervalParameter::Ptr interval = std::dynamic_pointer_cast<param::IntervalParameter>(p);
+        if(interval) {
+            auto low = interval;
+            auto high = std::dynamic_pointer_cast<param::IntervalParameter>(supported_params[i]);
+
+            if(!high) {
+                aerr << "cannot deserialize interval..." << std::endl;
+            } else {
+                p->set<std::pair<int, int>>(std::pair<int, int>(values->at(i), values->at(i+1)));
+            }
+            ++i;
+
+        } else {
+            if(p->is<int>()) {
+                p->set<int>(values->at(i));
+            } else {
+                p->set<double>(values->at(i));
+            }
+        }
+    }
 }
 
 void EvaOptimizer::handleEvaResponse()
@@ -161,7 +231,6 @@ void EvaOptimizer::handleEvaResponse()
     // continue message?
     VectorMsg<char>::Ptr continue_question = std::dynamic_pointer_cast<VectorMsg<char> >(res);
     if(continue_question) {
-        //        ainfo << "continue?" << std::endl;
         VectorMsg<char>::Ptr continue_answer(new VectorMsg<char>);
         continue_answer->assign("continue",8);
         client_->write(continue_answer);
@@ -178,60 +247,9 @@ void EvaOptimizer::handleEvaResponse()
         throw std::runtime_error("didn't get parameters");
     }
 
-    std::vector<csapex::param::Parameter::Ptr> supported_params;
-    for(csapex::param::Parameter::Ptr p : getParameters()) {
-        // TODO: support more types
-        param::RangeParameter::Ptr range = std::dynamic_pointer_cast<param::RangeParameter>(p);
-        if(range) {
-            if(range->is<double>()) {
-                supported_params.push_back(p);
+    current_parameter_set_  = values;
 
-            } else if(range->is<int>()) {
-                supported_params.push_back(p);
-            }
-        }
-
-        param::IntervalParameter::Ptr interval = std::dynamic_pointer_cast<param::IntervalParameter>(p);
-        if(interval && interval->is<std::pair<int, int>>()) {
-            supported_params.push_back(p);
-            supported_params.push_back(p);
-        }
-    }
-
-    if(values->size() != supported_params.size()) {
-        client_.reset();
-        must_reinitialize_ = true;
-        std::stringstream msg;
-        msg << "number of parameters is wrong: " << values->size() << " vs. " << supported_params.size() << std::endl;
-        throw std::runtime_error(msg.str());
-    }
-
-    //    ainfo << "got a message with " << values->size() << " doubles" << std::endl;
-
-    // set parameter values to the values specified by eva
-    for(std::size_t i = 0; i < supported_params.size(); ++i) {
-        csapex::param::Parameter::Ptr p = supported_params[i];
-
-        param::IntervalParameter::Ptr interval = std::dynamic_pointer_cast<param::IntervalParameter>(p);
-        if(interval) {
-            auto low = interval;
-            auto high = std::dynamic_pointer_cast<param::IntervalParameter>(supported_params[i]);
-
-            if(!high) {
-                aerr << "cannot deserialize interaval..." << std::endl;
-            } else {
-                p->set<std::pair<int, int>>(std::pair<int, int>(values->at(i), values->at(i+1)));
-            }
-            ++i;
-
-        } else {
-            if(p->is<int>()) {
-                p->set<int>(values->at(i));
-            } else {
-                p->set<double>(values->at(i));
-            }
-        }
-    }
+    updateParameters(current_parameter_set_);
 
     // start another evaluation
     trigger_start_evaluation_->trigger();
@@ -255,6 +273,11 @@ void EvaOptimizer::process()
 void EvaOptimizer::finish()
 {
     if(!client_) {
+        aerr << "cannot finish, no client connection" << std::endl;
+        return;
+    }
+
+    if(!do_optimization_) {
         return;
     }
 
@@ -264,7 +287,9 @@ void EvaOptimizer::finish()
 
     if(fitness_ < best_fitness_) {
         best_fitness_ = fitness_;
-        // TODO: save parameters
+
+        // remember best parameter values
+        best_parameter_set_ = current_parameter_set_;
     }
 
 
@@ -279,7 +304,6 @@ void EvaOptimizer::finish()
 YAML::Node EvaOptimizer::makeRequest()
 {
     YAML::Node req;
-    // TODO: make parameter
     // TODO: define which are possible
     req["method"] = readParameter<std::string>("method");
 
@@ -346,6 +370,11 @@ void EvaOptimizer::stop()
     ainfo << "stopping optimization" << std::endl;
     do_optimization_ = false;
     must_reinitialize_ = true;
+}
+
+void EvaOptimizer::setBest()
+{
+    updateParameters(best_parameter_set_);
 }
 
 
