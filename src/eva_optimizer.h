@@ -48,6 +48,14 @@ private:
     Output* out_best_fitness_;
     Trigger* trigger_start_evaluation_;
 
+    param::OutputProgressParameter* progress_individual_;
+    param::OutputProgressParameter* progress_generation_;
+    int generation_;
+    int generations_;
+    int individual_;
+    int individuals_initial_;
+    int individuals_later_;
+
     double fitness_;
     double last_fitness_;
     double best_fitness_;
