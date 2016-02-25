@@ -10,6 +10,7 @@
 #include <csapex/param/range_parameter.h>
 #include <csapex/param/interval_parameter.h>
 #include <utils_jcppsocket/cpp/socket_msgs.h>
+#include <csapex/param/output_progress_parameter.h>
 
 /// SYSTEM
 #include <boost/lexical_cast.hpp>
@@ -26,7 +27,8 @@ using namespace serialization;
 EvaOptimizer::EvaOptimizer()
     : last_fitness_(std::numeric_limits<double>::infinity()),
       best_fitness_(std::numeric_limits<double>::infinity()),
-      must_reinitialize_(true), do_optimization_(false)
+      must_reinitialize_(true), do_optimization_(false),
+      next_tick_(false)
 {
 }
 
@@ -35,6 +37,25 @@ void EvaOptimizer::setupParameters(Parameterizable& parameters)
     parameters.addParameter(csapex::param::ParameterFactory::declareText("server name", "localhost"));
     parameters.addParameter(csapex::param::ParameterFactory::declareText("server port", "2342"));
     parameters.addParameter(csapex::param::ParameterFactory::declareText("method", "default"));
+
+    parameters.addParameter(csapex::param::ParameterFactory::declareRange("generations", -1, 1024, -1, 1), [this](param::Parameter* p) {
+        generations_ = p->as<int>();
+        if(generations_ == -1) {
+            progress_generation_->setProgress(0, 0);
+        } else {
+            progress_generation_->setProgress(generation_, generations_);
+        }
+    });
+    parameters.addParameter(csapex::param::ParameterFactory::declareRange("individuals/initial", 60, 60, 60, 1), individuals_initial_);
+    parameters.addParameter(csapex::param::ParameterFactory::declareRange("individuals/later", 30, 30, 30, 1), individuals_later_);
+
+
+    csapex::param::Parameter::Ptr pg = csapex::param::ParameterFactory::declareOutputProgress("generation");
+    progress_generation_ = dynamic_cast<param::OutputProgressParameter*>(pg.get());
+    parameters.addParameter(pg);
+    csapex::param::Parameter::Ptr pp = csapex::param::ParameterFactory::declareOutputProgress("population");
+    progress_individual_ = dynamic_cast<param::OutputProgressParameter*>(pp.get());
+    parameters.addParameter(pp);
 
     parameters.addParameter(csapex::param::ParameterFactory::declareTrigger("start"), [this](csapex::param::Parameter*) {
         start();
@@ -65,11 +86,15 @@ void EvaOptimizer::setup(NodeModifier& node_modifier)
 
 bool EvaOptimizer::canTick()
 {
-    return must_reinitialize_ && do_optimization_;
+    return (must_reinitialize_ || next_tick_) && do_optimization_;
 }
 
 void EvaOptimizer::tick()
 {
+    apex_assert_hard(next_tick_ || must_reinitialize_);
+
+    next_tick_ = false;
+
     // initilization?
     if(!client_) {
         tryMakeSocket();
@@ -120,7 +145,10 @@ void EvaOptimizer::tick()
                 std::string yaml = config_ss.str();
                 config->assign(yaml.data(), yaml.size());
 
+                ainfo << "write config " << std::endl;
                 client_->write(config);
+
+                handleResponse();
 
             } else {
                 aerr << "didn't receive a welcome message" << std::endl;
@@ -140,7 +168,14 @@ void EvaOptimizer::tick()
 
     must_reinitialize_ = false;
 
-    handleEvaResponse();
+    //handleEvaResponse();
+
+    if(best_fitness_ != std::numeric_limits<double>::infinity()) {
+        msg::publish(out_best_fitness_, best_fitness_);
+    }
+    if(last_fitness_ != std::numeric_limits<double>::infinity()) {
+        msg::publish(out_last_fitness_, last_fitness_);
+    }
 }
 
 void EvaOptimizer::updateParameters(const utils_jcppsocket::VectorMsg<double>::Ptr& values)
@@ -151,7 +186,7 @@ void EvaOptimizer::updateParameters(const utils_jcppsocket::VectorMsg<double>::P
 
     std::vector<csapex::param::Parameter::Ptr> supported_params;
 
-    for(csapex::param::Parameter::Ptr p : getParameters()) {
+    for(csapex::param::Parameter::Ptr p : getPersistentParameters()) {
         // TODO: support more types
         param::RangeParameter::Ptr range = std::dynamic_pointer_cast<param::RangeParameter>(p);
         if(range) {
@@ -204,10 +239,19 @@ void EvaOptimizer::updateParameters(const utils_jcppsocket::VectorMsg<double>::P
     }
 }
 
-void EvaOptimizer::handleEvaResponse()
+void EvaOptimizer::requestNewValues(double fitness)
 {
-    fitness_ = std::numeric_limits<double>::infinity();
+    ValueMsg<double>::Ptr msg(new ValueMsg<double>);
+    msg->set(fitness);
 
+    client_->write(msg);
+    handleResponse();
+
+    fitness_ = std::numeric_limits<double>::infinity();
+}
+
+void EvaOptimizer::handleResponse()
+{
     SocketMsg::Ptr res;
     client_->read(res);
 
@@ -217,6 +261,16 @@ void EvaOptimizer::handleEvaResponse()
 
         throw std::runtime_error("could not read");
     }
+
+    ValueMsg<double>::Ptr value = std::dynamic_pointer_cast<ValueMsg<double>>(res);
+    if(value) {
+        ainfo << "finished with fitness " << value->get() << std::endl;
+        do_optimization_ = false;
+
+        setBest();
+        return;
+    }
+
 
     ErrorMsg::Ptr err = std::dynamic_pointer_cast<ErrorMsg>(res);
     if(err) {
@@ -232,9 +286,28 @@ void EvaOptimizer::handleEvaResponse()
     VectorMsg<char>::Ptr continue_question = std::dynamic_pointer_cast<VectorMsg<char> >(res);
     if(continue_question) {
         VectorMsg<char>::Ptr continue_answer(new VectorMsg<char>);
-        continue_answer->assign("continue",8);
-        client_->write(continue_answer);
-        tick();
+        if(generations_ == -1 || generation_++ < generations_) {
+            continue_answer->assign("continue",8);
+            client_->write(continue_answer);
+
+            if(generations_ == -1) {
+                progress_generation_->setProgress(0, 0);
+            } else {
+                progress_generation_->setProgress(generation_, generations_);
+            }
+
+            individual_ = 0;
+
+            requestNewValues(fitness_);
+            handleResponse();
+
+        } else {
+            continue_answer->assign("terminate",9);
+            client_->write(continue_answer);
+
+            progress_generation_->setProgress(generations_, generations_);
+        }
+
         return;
     }
 
@@ -250,9 +323,6 @@ void EvaOptimizer::handleEvaResponse()
     current_parameter_set_  = values;
 
     updateParameters(current_parameter_set_);
-
-    // start another evaluation
-    trigger_start_evaluation_->trigger();
 }
 
 void EvaOptimizer::process()
@@ -262,12 +332,15 @@ void EvaOptimizer::process()
     }
     fitness_ = msg::getValue<double>(in_fitness_);
 
-    if(best_fitness_ != std::numeric_limits<double>::infinity()) {
-        msg::publish(out_best_fitness_, best_fitness_);
-    }
-    if(last_fitness_ != std::numeric_limits<double>::infinity()) {
-        msg::publish(out_last_fitness_, last_fitness_);
-    }
+    next_tick_ = true;
+}
+
+void EvaOptimizer::endOfSequence()
+{
+    ++individual_;
+    progress_individual_->setProgress(individual_, generation_ > 0 ? individuals_later_ : individuals_initial_);
+
+    finish();
 }
 
 void EvaOptimizer::finish()
@@ -281,8 +354,6 @@ void EvaOptimizer::finish()
         return;
     }
 
-    ainfo << "got fitness: " << fitness_ << std::endl;
-
     last_fitness_ = fitness_;
 
     if(fitness_ < best_fitness_) {
@@ -294,11 +365,13 @@ void EvaOptimizer::finish()
 
 
     // send fitness back to eva
-    ValueMsg<double>::Ptr msg(new ValueMsg<double>);
-    msg->set(fitness_);
-    client_->write(msg);
+    requestNewValues(fitness_);
 
-    handleEvaResponse();
+
+    // start another evaluation
+    trigger_start_evaluation_->trigger();
+
+    next_tick_ = true;
 }
 
 YAML::Node EvaOptimizer::makeRequest()
@@ -307,7 +380,7 @@ YAML::Node EvaOptimizer::makeRequest()
     // TODO: define which are possible
     req["method"] = readParameter<std::string>("method");
 
-    for(csapex::param::Parameter::Ptr p : getParameters()) {
+    for(csapex::param::Parameter::Ptr p : getPersistentParameters()) {
         param::RangeParameter::Ptr range = std::dynamic_pointer_cast<param::RangeParameter>(p);
         if(range) {
             if(range->is<double>()) {
@@ -362,6 +435,9 @@ void EvaOptimizer::start()
 {
     ainfo << "starting optimization" << std::endl;
     do_optimization_ = true;
+    next_tick_ = true;
+    generation_ = 0;
+    individual_ = 0;
 }
 
 
