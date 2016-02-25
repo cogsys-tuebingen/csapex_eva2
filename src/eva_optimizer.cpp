@@ -26,7 +26,8 @@ using namespace serialization;
 EvaOptimizer::EvaOptimizer()
     : last_fitness_(std::numeric_limits<double>::infinity()),
       best_fitness_(std::numeric_limits<double>::infinity()),
-      must_reinitialize_(true), do_optimization_(false)
+      must_reinitialize_(true), do_optimization_(false),
+      next_tick_(false)
 {
 }
 
@@ -65,11 +66,16 @@ void EvaOptimizer::setup(NodeModifier& node_modifier)
 
 bool EvaOptimizer::canTick()
 {
-    return must_reinitialize_ && do_optimization_;
+    return (must_reinitialize_ || next_tick_) && do_optimization_;
 }
 
 void EvaOptimizer::tick()
 {
+    apex_assert_hard(next_tick_ || must_reinitialize_);
+    ainfo << "tick " << next_tick_ << " / " << must_reinitialize_ << " / " << do_optimization_ << std::endl;
+
+    next_tick_ = false;
+
     // initilization?
     if(!client_) {
         tryMakeSocket();
@@ -120,6 +126,7 @@ void EvaOptimizer::tick()
                 std::string yaml = config_ss.str();
                 config->assign(yaml.data(), yaml.size());
 
+                ainfo << "write config " << std::endl;
                 client_->write(config);
 
             } else {
@@ -140,7 +147,14 @@ void EvaOptimizer::tick()
 
     must_reinitialize_ = false;
 
-    handleEvaResponse();
+    //handleEvaResponse();
+
+    if(best_fitness_ != std::numeric_limits<double>::infinity()) {
+        msg::publish(out_best_fitness_, best_fitness_);
+    }
+    if(last_fitness_ != std::numeric_limits<double>::infinity()) {
+        msg::publish(out_last_fitness_, last_fitness_);
+    }
 }
 
 void EvaOptimizer::updateParameters(const utils_jcppsocket::VectorMsg<double>::Ptr& values)
@@ -204,9 +218,24 @@ void EvaOptimizer::updateParameters(const utils_jcppsocket::VectorMsg<double>::P
     }
 }
 
-void EvaOptimizer::handleEvaResponse()
+void EvaOptimizer::requestNewValues(double fitness)
 {
+    ValueMsg<double>::Ptr msg(new ValueMsg<double>);
+    msg->set(fitness);
+    ainfo << "request new value" << std::endl;
+    client_->write(msg);
+
+    handleResponse();
+
     fitness_ = std::numeric_limits<double>::infinity();
+
+    // start another evaluation
+    trigger_start_evaluation_->trigger();
+}
+
+void EvaOptimizer::handleResponse()
+{
+    ainfo << "handleResponse" << std::endl;
 
     SocketMsg::Ptr res;
     client_->read(res);
@@ -217,6 +246,16 @@ void EvaOptimizer::handleEvaResponse()
 
         throw std::runtime_error("could not read");
     }
+
+    ainfo << "read ok: " << type2name(typeid(*res)) << std::endl;
+
+    ValueMsg<double>::Ptr value = std::dynamic_pointer_cast<ValueMsg<double>>(res);
+    if(value) {
+        ainfo << "finished with fitness " << value->get() << std::endl;
+        do_optimization_ = false;
+        return;
+    }
+
 
     ErrorMsg::Ptr err = std::dynamic_pointer_cast<ErrorMsg>(res);
     if(err) {
@@ -231,10 +270,18 @@ void EvaOptimizer::handleEvaResponse()
     // continue message?
     VectorMsg<char>::Ptr continue_question = std::dynamic_pointer_cast<VectorMsg<char> >(res);
     if(continue_question) {
+        std::stringstream s;
+        for(const char& c : *continue_question) {
+            s << c;
+        }
+        ainfo << "continue: " << s.str() << std::endl;
+
         VectorMsg<char>::Ptr continue_answer(new VectorMsg<char>);
         continue_answer->assign("continue",8);
         client_->write(continue_answer);
-        tick();
+
+        handleResponse();
+
         return;
     }
 
@@ -250,9 +297,6 @@ void EvaOptimizer::handleEvaResponse()
     current_parameter_set_  = values;
 
     updateParameters(current_parameter_set_);
-
-    // start another evaluation
-    trigger_start_evaluation_->trigger();
 }
 
 void EvaOptimizer::process()
@@ -262,12 +306,14 @@ void EvaOptimizer::process()
     }
     fitness_ = msg::getValue<double>(in_fitness_);
 
-    if(best_fitness_ != std::numeric_limits<double>::infinity()) {
-        msg::publish(out_best_fitness_, best_fitness_);
-    }
-    if(last_fitness_ != std::numeric_limits<double>::infinity()) {
-        msg::publish(out_last_fitness_, last_fitness_);
-    }
+    ainfo << "got current fitness: " << fitness_ << std::endl;
+
+    next_tick_ = true;
+}
+
+void EvaOptimizer::endOfSequence()
+{
+    finish();
 }
 
 void EvaOptimizer::finish()
@@ -294,11 +340,9 @@ void EvaOptimizer::finish()
 
 
     // send fitness back to eva
-    ValueMsg<double>::Ptr msg(new ValueMsg<double>);
-    msg->set(fitness_);
-    client_->write(msg);
+    requestNewValues(fitness_);
 
-    handleEvaResponse();
+    next_tick_ = true;
 }
 
 YAML::Node EvaOptimizer::makeRequest()
@@ -362,6 +406,7 @@ void EvaOptimizer::start()
 {
     ainfo << "starting optimization" << std::endl;
     do_optimization_ = true;
+    next_tick_ = true;
 }
 
 

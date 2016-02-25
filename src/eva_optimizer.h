@@ -23,6 +23,8 @@ public:
     virtual void tick() override;
     virtual bool canTick() override;
 
+    virtual void endOfSequence() override;
+
 private:
     void tryMakeSocket();
     void makeSocket();
@@ -37,7 +39,8 @@ private:
     void updateParameters(const utils_jcppsocket::VectorMsg<double>::Ptr& values);
 
     YAML::Node makeRequest();
-    void handleEvaResponse();
+    void handleResponse();
+    void requestNewValues(double fitness);
 
 private:
     Input* in_fitness_;
@@ -51,6 +54,7 @@ private:
 
     bool must_reinitialize_;
     bool do_optimization_;
+    bool next_tick_;
     utils_jcppsocket::SyncClient::Ptr client_;
 
 
