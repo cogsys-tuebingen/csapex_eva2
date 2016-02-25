@@ -74,7 +74,7 @@ void EvaOptimizer::setupParameters(Parameterizable& parameters)
 
 void EvaOptimizer::setup(NodeModifier& node_modifier)
 {
-    in_fitness_  = node_modifier.addInput<double>("Fitness");
+    in_fitness_  = node_modifier.addOptionalInput<double>("Fitness");
     out_last_fitness_  = node_modifier.addOutput<double>("Last Fitness");
     out_best_fitness_  = node_modifier.addOutput<double>("Best Fitness");
     trigger_start_evaluation_ = node_modifier.addTrigger("Evaluate");
@@ -330,7 +330,13 @@ void EvaOptimizer::process()
     if(must_reinitialize_) {
         return;
     }
-    fitness_ = msg::getValue<double>(in_fitness_);
+
+    auto m = msg::getMessage(in_fitness_);
+
+    if(auto vm = std::dynamic_pointer_cast<connection_types::GenericValueMessage<double> const>(m)){
+        fitness_ = msg::getValue<double>(in_fitness_);
+    }
+
 
     next_tick_ = true;
 }
