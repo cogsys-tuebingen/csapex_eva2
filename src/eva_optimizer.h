@@ -23,7 +23,7 @@ public:
     virtual void tick() override;
     virtual bool canTick() override;
 
-    virtual void endOfSequence() override;
+    virtual void processMarker(const csapex::connection_types::MessageConstPtr &marker) override;
 
 private:
     void tryMakeSocket();

@@ -11,6 +11,7 @@
 #include <csapex/param/interval_parameter.h>
 #include <utils_jcppsocket/cpp/socket_msgs.h>
 #include <csapex/param/output_progress_parameter.h>
+#include <csapex/msg/end_of_sequence_message.h>
 
 /// SYSTEM
 #include <boost/lexical_cast.hpp>
@@ -341,12 +342,14 @@ void EvaOptimizer::process()
     next_tick_ = true;
 }
 
-void EvaOptimizer::endOfSequence()
+void EvaOptimizer::processMarker(const csapex::connection_types::MessageConstPtr &marker)
 {
-    ++individual_;
-    progress_individual_->setProgress(individual_, generation_ > 0 ? individuals_later_ : individuals_initial_);
+    if(std::dynamic_pointer_cast<connection_types::EndOfSequenceMessage const>(marker)) {
+        ++individual_;
+        progress_individual_->setProgress(individual_, generation_ > 0 ? individuals_later_ : individuals_initial_);
 
-    finish();
+        finish();
+    }
 }
 
 void EvaOptimizer::finish()
