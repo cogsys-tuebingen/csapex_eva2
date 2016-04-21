@@ -46,7 +46,7 @@ private:
     Input* in_fitness_;
     Output* out_last_fitness_;
     Output* out_best_fitness_;
-    Trigger* trigger_start_evaluation_;
+    Event* trigger_start_evaluation_;
 
     param::OutputProgressParameter* progress_individual_;
     param::OutputProgressParameter* progress_generation_;
