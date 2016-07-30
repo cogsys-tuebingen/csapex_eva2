@@ -3,7 +3,7 @@
 
 /// PROJECT
 #include <csapex/msg/io.h>
-#include <csapex/signal/trigger.h>
+#include <csapex/signal/event.h>
 #include <csapex/utility/register_apex_plugin.h>
 #include <csapex/param/parameter_factory.h>
 #include <csapex/model/node_modifier.h>
@@ -78,7 +78,7 @@ void EvaOptimizer::setup(NodeModifier& node_modifier)
     in_fitness_  = node_modifier.addOptionalInput<double>("Fitness");
     out_last_fitness_  = node_modifier.addOutput<double>("Last Fitness");
     out_best_fitness_  = node_modifier.addOutput<double>("Best Fitness");
-    trigger_start_evaluation_ = node_modifier.addTrigger("Evaluate");
+    trigger_start_evaluation_ = node_modifier.addEvent("Evaluate");
 
 
     node_modifier.setIsSource(true);

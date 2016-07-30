@@ -131,7 +131,7 @@ void EvaOptimizerAdapter::widgetPicked()
 
                 AUUID parent_uuid = parent_->getGraphView()->getGraphFacade()->getAbsoluteUUID();
 
-                command::AddMessageConnection::Ptr cmd(new command::AddMessageConnection(parent_uuid, from, to));
+                command::AddMessageConnection::Ptr cmd(new command::AddMessageConnection(parent_uuid, from, to, false));
 
                 executeCommand(cmd);
 
