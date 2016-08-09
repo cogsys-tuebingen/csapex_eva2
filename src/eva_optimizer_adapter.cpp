@@ -60,6 +60,7 @@ QDialog* EvaOptimizerAdapter::makeTypeDialog()
     QFormLayout* form = new QFormLayout;
 
     QComboBox* type = new QComboBox;
+    type->addItem("int");
     type->addItem("double");
     form->addRow("Type", type);
 
