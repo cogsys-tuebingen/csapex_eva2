@@ -15,8 +15,8 @@
   <build_depend>csapex_optimization</build_depend>
   <run_depend>csapex_optimization</run_depend>
 
-  <build_depend>utils_jcppsocket</build_depend>
-  <run_depend>utils_jcppsocket</run_depend>
+  <build_depend>cslibs_jcppsocket</build_depend>
+  <run_depend>cslibs_jcppsocket</run_depend>
 
   <run_depend>csapex</run_depend>
 

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(csapex_eva)
 
 find_package(catkin REQUIRED COMPONENTS
-  csapex_optimization utils_jcppsocket
+  csapex_optimization cslibs_jcppsocket
 )
 
 find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)

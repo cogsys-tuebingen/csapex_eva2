@@ -9,7 +9,7 @@
 #include <csapex/model/node_modifier.h>
 #include <csapex/param/range_parameter.h>
 #include <csapex/param/interval_parameter.h>
-#include <utils_jcppsocket/cpp/socket_msgs.h>
+#include <cslibs_jcppsocket/cpp/socket_msgs.h>
 #include <csapex/param/output_progress_parameter.h>
 #include <csapex/msg/end_of_sequence_message.h>
 
@@ -21,7 +21,7 @@ CSAPEX_REGISTER_CLASS(csapex::EvaOptimizer, csapex::Node)
 using namespace csapex;
 using namespace csapex::connection_types;
 
-using namespace utils_jcppsocket;
+using namespace cslibs_jcppsocket;
 using namespace serialization;
 
 
@@ -179,7 +179,7 @@ void EvaOptimizer::tick()
     }
 }
 
-void EvaOptimizer::updateParameters(const utils_jcppsocket::VectorMsg<double>::Ptr& values)
+void EvaOptimizer::updateParameters(const cslibs_jcppsocket::VectorMsg<double>::Ptr& values)
 {
     if(!values) {
         return;
@@ -479,7 +479,7 @@ void EvaOptimizer::makeSocket()
     std::string str_port = readParameter<std::string>("server port");
     int         port = boost::lexical_cast<int>(str_port);
 
-    client_.reset(new utils_jcppsocket::SyncClient(str_name, port));
+    client_.reset(new cslibs_jcppsocket::SyncClient(str_name, port));
 
     node_modifier_->setNoError();
 }
