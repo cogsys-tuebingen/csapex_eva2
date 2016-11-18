@@ -9,7 +9,7 @@
 #include <csapex/param/range_parameter.h>
 #include <csapex/param/parameter_factory.h>
 #include <csapex/command/dispatcher.h>
-#include <csapex/command/add_msg_connection.h>
+#include <csapex/command/add_connection.h>
 #include <csapex/utility/uuid_provider.h>
 #include <csapex/view/node/box.h>
 #include <csapex/view/designer/designer_scene.h>
@@ -131,7 +131,7 @@ void EvaOptimizerAdapter::widgetPicked()
 
                 AUUID parent_uuid = parent_->getGraphView()->getGraphFacade()->getAbsoluteUUID();
 
-                command::AddMessageConnection::Ptr cmd(new command::AddMessageConnection(parent_uuid, from, to, false));
+                command::AddConnection::Ptr cmd(new command::AddConnection(parent_uuid, from, to, false));
 
                 executeCommand(cmd);
 
