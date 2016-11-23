@@ -19,19 +19,19 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_library(csapex_eva_node
+add_library(${PROJECT_NAME}_node
     src/eva_optimizer.cpp
 )
 
-target_link_libraries(csapex_eva_node
+target_link_libraries(${PROJECT_NAME}_node
     ${catkin_LIBRARIES})
 
 
-add_library(csapex_eva_qt
+add_library(${PROJECT_NAME}_qt
     src/eva_optimizer_adapter.cpp
 )
 
-target_link_libraries(csapex_eva_qt
+target_link_libraries(${PROJECT_NAME}_qt
     ${catkin_LIBRARIES})
 
 #
@@ -41,11 +41,7 @@ target_link_libraries(csapex_eva_qt
 install(FILES plugins.xml
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
-install(TARGETS csapex_eva_node
+install(TARGETS ${PROJECT_NAME}_node ${PROJECT_NAME}_qt
         ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-        RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
-install(TARGETS csapex_eva_qt
-        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-        RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
