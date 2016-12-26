@@ -26,15 +26,13 @@ using namespace serialization;
 
 
 EvaOptimizer::EvaOptimizer()
-    : last_fitness_(std::numeric_limits<double>::infinity()),
-      best_fitness_(std::numeric_limits<double>::infinity()),
-      must_reinitialize_(true), do_optimization_(false),
-      next_tick_(false)
 {
 }
 
 void EvaOptimizer::setupParameters(Parameterizable& parameters)
 {
+    Optimizer::setupParameters(parameters);
+
     parameters.addParameter(csapex::param::ParameterFactory::declareText("server name", "localhost"));
     parameters.addParameter(csapex::param::ParameterFactory::declareText("server port", "2342"));
     parameters.addParameter(csapex::param::ParameterFactory::declareText("method", "default"));
@@ -57,45 +55,10 @@ void EvaOptimizer::setupParameters(Parameterizable& parameters)
     csapex::param::Parameter::Ptr pp = csapex::param::ParameterFactory::declareOutputProgress("population");
     progress_individual_ = dynamic_cast<param::OutputProgressParameter*>(pp.get());
     parameters.addParameter(pp);
-
-    parameters.addParameter(csapex::param::ParameterFactory::declareTrigger("start"), [this](csapex::param::Parameter*) {
-        start();
-    });
-    parameters.addParameter(csapex::param::ParameterFactory::declareTrigger("finish"), [this](csapex::param::Parameter*) {
-        finish();
-    });
-    parameters.addParameter(csapex::param::ParameterFactory::declareTrigger("stop"), [this](csapex::param::Parameter*) {
-        stop();
-    });
-    parameters.addParameter(csapex::param::ParameterFactory::declareTrigger("set best"), [this](csapex::param::Parameter*) {
-        stop();
-        setBest();
-    });
 }
 
-void EvaOptimizer::setup(NodeModifier& node_modifier)
+bool EvaOptimizer::generateNextParameterSet()
 {
-    in_fitness_  = node_modifier.addOptionalInput<double>("Fitness");
-    out_last_fitness_  = node_modifier.addOutput<double>("Last Fitness");
-    out_best_fitness_  = node_modifier.addOutput<double>("Best Fitness");
-    trigger_start_evaluation_ = node_modifier.addEvent("Evaluate");
-
-
-    node_modifier.setIsSource(true);
-    node_modifier.setIsSink(true);
-}
-
-bool EvaOptimizer::canTick()
-{
-    return (must_reinitialize_ || next_tick_) && do_optimization_;
-}
-
-void EvaOptimizer::tick()
-{
-    apex_assert_hard(next_tick_ || must_reinitialize_);
-
-    next_tick_ = false;
-
     // initilization?
     if(!client_) {
         tryMakeSocket();
@@ -103,7 +66,7 @@ void EvaOptimizer::tick()
         if(!client_) {
             aerr << "couldn't create client" << std::endl;
             node_modifier_->setError("no client");
-            return;
+            return false;
         } else {
             ainfo << "client initialized" << std::endl;
         }
@@ -167,16 +130,10 @@ void EvaOptimizer::tick()
         throw std::runtime_error("connection lost");
     }
 
-    must_reinitialize_ = false;
+    // send fitness back to eva
+    requestNewValues(fitness_);
 
-    //handleEvaResponse();
-
-    if(best_fitness_ != std::numeric_limits<double>::infinity()) {
-        msg::publish(out_best_fitness_, best_fitness_);
-    }
-    if(last_fitness_ != std::numeric_limits<double>::infinity()) {
-        msg::publish(out_last_fitness_, last_fitness_);
-    }
+    return true;
 }
 
 void EvaOptimizer::updateParameters(const cslibs_jcppsocket::VectorMsg<double>::Ptr& values)
@@ -208,7 +165,6 @@ void EvaOptimizer::updateParameters(const cslibs_jcppsocket::VectorMsg<double>::
 
     if(values->size() != supported_params.size()) {
         client_.reset();
-        must_reinitialize_ = true;
         std::stringstream msg;
         msg << "number of parameters is wrong: " << values->size() << " vs. " << supported_params.size() << std::endl;
         throw std::runtime_error(msg.str());
@@ -247,8 +203,6 @@ void EvaOptimizer::requestNewValues(double fitness)
 
     client_->write(msg);
     handleResponse();
-
-    fitness_ = std::numeric_limits<double>::infinity();
 }
 
 void EvaOptimizer::handleResponse()
@@ -258,7 +212,6 @@ void EvaOptimizer::handleResponse()
 
     if(!res) {
         client_.reset();
-        must_reinitialize_ = true;
 
         throw std::runtime_error("could not read");
     }
@@ -266,7 +219,7 @@ void EvaOptimizer::handleResponse()
     ValueMsg<double>::Ptr value = std::dynamic_pointer_cast<ValueMsg<double>>(res);
     if(value) {
         ainfo << "finished with fitness " << value->get() << std::endl;
-        do_optimization_ = false;
+        stop();
 
         setBest();
         return;
@@ -276,7 +229,6 @@ void EvaOptimizer::handleResponse()
     ErrorMsg::Ptr err = std::dynamic_pointer_cast<ErrorMsg>(res);
     if(err) {
         client_.reset();
-        must_reinitialize_ = true;
 
         std::stringstream ss;
         ss << "Got error [ " << err->get() << " ]";
@@ -317,7 +269,6 @@ void EvaOptimizer::handleResponse()
     VectorMsg<double>::Ptr values = std::dynamic_pointer_cast<VectorMsg<double> >(res);
     if(!values) {
         client_.reset();
-        must_reinitialize_ = true;
         throw std::runtime_error("didn't get parameters");
     }
 
@@ -326,61 +277,12 @@ void EvaOptimizer::handleResponse()
     updateParameters(current_parameter_set_);
 }
 
-void EvaOptimizer::process()
-{
-    if(must_reinitialize_) {
-        return;
-    }
-
-    auto m = msg::getMessage(in_fitness_);
-
-    if(auto vm = std::dynamic_pointer_cast<connection_types::GenericValueMessage<double> const>(m)){
-        fitness_ = msg::getValue<double>(in_fitness_);
-    }
-
-
-    next_tick_ = true;
-}
-
-void EvaOptimizer::processMarker(const csapex::connection_types::MessageConstPtr &marker)
-{
-    if(std::dynamic_pointer_cast<connection_types::EndOfSequenceMessage const>(marker)) {
-        ++individual_;
-        progress_individual_->setProgress(individual_, generation_ > 0 ? individuals_later_ : individuals_initial_);
-
-        finish();
-    }
-}
-
 void EvaOptimizer::finish()
 {
-    if(!client_) {
-        aerr << "cannot finish, no client connection" << std::endl;
-        return;
-    }
+    ++individual_;
+    progress_individual_->setProgress(individual_, generation_ > 0 ? individuals_later_ : individuals_initial_);
 
-    if(!do_optimization_) {
-        return;
-    }
-
-    last_fitness_ = fitness_;
-
-    if(fitness_ < best_fitness_) {
-        best_fitness_ = fitness_;
-
-        // remember best parameter values
-        best_parameter_set_ = current_parameter_set_;
-    }
-
-
-    // send fitness back to eva
-    requestNewValues(fitness_);
-
-
-    // start another evaluation
-    trigger_start_evaluation_->trigger();
-
-    next_tick_ = true;
+    Optimizer::finish();
 }
 
 YAML::Node EvaOptimizer::makeRequest()
@@ -440,26 +342,10 @@ YAML::Node EvaOptimizer::makeRequest()
     return req;
 }
 
-void EvaOptimizer::start()
+void EvaOptimizer::reset()
 {
-    ainfo << "starting optimization" << std::endl;
-    do_optimization_ = true;
-    next_tick_ = true;
     generation_ = 0;
     individual_ = 0;
-}
-
-
-void EvaOptimizer::stop()
-{
-    ainfo << "stopping optimization" << std::endl;
-    do_optimization_ = false;
-    must_reinitialize_ = true;
-}
-
-void EvaOptimizer::setBest()
-{
-    updateParameters(best_parameter_set_);
 }
 
 
