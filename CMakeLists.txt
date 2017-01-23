@@ -22,6 +22,7 @@ include_directories(
 add_library(${PROJECT_NAME}_node
     src/abstract_optimizer.cpp
     src/optimizer_de.cpp
+    src/optimizer_ga.cpp
     src/eva_optimizer.cpp
 )
 

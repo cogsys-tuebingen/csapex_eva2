@@ -31,7 +31,7 @@ void OptimizerDE::addParameters(Parameterizable& params)
 {
     AbstractOptimizer::addParameters(params);
 
-    params.addTemporaryParameter(param::ParameterFactory::declareRange("individuals/target", 30, 30, 30, 1),
+    params.addTemporaryParameter(param::ParameterFactory::declareRange("individuals/later_generations", 30, 30, 30, 1),
                                  individuals_later_);
 
     params.addTemporaryParameter(csapex::param::ParameterFactory::declareRange("generations", -1, 1024, -1, 1), [this](param::Parameter* p) {

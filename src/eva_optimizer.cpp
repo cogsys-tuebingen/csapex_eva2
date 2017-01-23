@@ -12,6 +12,7 @@
 #include <cslibs_jcppsocket/cpp/socket_msgs.h>
 #include <csapex/msg/end_of_sequence_message.h>
 #include "optimizer_de.h"
+#include "optimizer_ga.h"
 
 /// SYSTEM
 #include <boost/lexical_cast.hpp>
@@ -104,26 +105,28 @@ void EvaOptimizer::handleResponse()
     }
 
     // continue message?
-    VectorMsg<char>::Ptr continue_question = std::dynamic_pointer_cast<VectorMsg<char> >(res);
-    if(continue_question) {
-        VectorMsg<char>::Ptr continue_answer(new VectorMsg<char>);
-        if(optimizer_->canContinue()) {
-            continue_answer->assign("continue",8);
-            client_->write(continue_answer);
+    VectorMsg<char>::Ptr string_message = std::dynamic_pointer_cast<VectorMsg<char> >(res);
+    if(string_message) {
+        std::string question(string_message->begin(), string_message->end());
+        if(question == "continue") {
+            VectorMsg<char>::Ptr continue_answer(new VectorMsg<char>);
+            if(optimizer_->canContinue()) {
+                continue_answer->assign("continue",8);
+                client_->write(continue_answer);
 
-            optimizer_->nextIteration();
+                optimizer_->nextIteration();
 
-            requestNewValues(fitness_);
-            handleResponse();
+                requestNewValues(fitness_);
+                handleResponse();
 
-        } else {
-            continue_answer->assign("terminate",9);
-            client_->write(continue_answer);
+            } else {
+                continue_answer->assign("terminate",9);
+                client_->write(continue_answer);
 
-            optimizer_->terminate();
+                optimizer_->terminate();
+            }
+            return;
         }
-
-        return;
     }
 
     apex_assert(optimizer_);
@@ -247,7 +250,9 @@ void EvaOptimizer::updateOptimizer()
         default:
         case Method::DE:
             optimizer_ = std::make_shared<OptimizerDE>();
-
+            break;
+        case Method::GA:
+            optimizer_ = std::make_shared<OptimizerGA>();
             break;
         }
 
