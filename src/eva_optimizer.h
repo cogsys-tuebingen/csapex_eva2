@@ -6,6 +6,7 @@
 #include <csapex/msg/msg_fwd.h>
 #include <csapex/signal/signal_fwd.h>
 #include <cslibs_jcppsocket/cpp/sync_client.h>
+#include "abstract_optimizer.h"
 
 namespace csapex {
 
@@ -13,6 +14,13 @@ namespace csapex {
 class EvaOptimizer : public Optimizer
 {
     friend class EvaOptimizerAdapter;
+
+    enum class Method
+    {
+        None,
+        DE,
+        GA
+    };
 
 public:
     EvaOptimizer();
@@ -26,27 +34,22 @@ private:
 
 private:
     void reset();
+    void start() override;
 
     void finish();
 
-    void updateParameters(const cslibs_jcppsocket::VectorMsg<double>::Ptr& values);
 
-    YAML::Node makeRequest();
     void handleResponse();
     void requestNewValues(double fitness);
 
+    void updateOptimizer();
+
 private:
-    param::OutputProgressParameter* progress_individual_;
-    param::OutputProgressParameter* progress_generation_;
-    int generation_;
-    int generations_;
-    int individual_;
-    int individuals_initial_;
-    int individuals_later_;
+    Method method_;
+
+    std::shared_ptr<AbstractOptimizer> optimizer_;
 
     cslibs_jcppsocket::SyncClient::Ptr client_;
-
-    cslibs_jcppsocket::VectorMsg<double>::Ptr current_parameter_set_;
 };
 
 

@@ -10,8 +10,8 @@
 #include <csapex/param/range_parameter.h>
 #include <csapex/param/interval_parameter.h>
 #include <cslibs_jcppsocket/cpp/socket_msgs.h>
-#include <csapex/param/output_progress_parameter.h>
 #include <csapex/msg/end_of_sequence_message.h>
+#include "optimizer_de.h"
 
 /// SYSTEM
 #include <boost/lexical_cast.hpp>
@@ -26,6 +26,7 @@ using namespace serialization;
 
 
 EvaOptimizer::EvaOptimizer()
+    : method_(Method::None)
 {
 }
 
@@ -35,95 +36,20 @@ void EvaOptimizer::setupParameters(Parameterizable& parameters)
 
     parameters.addParameter(csapex::param::ParameterFactory::declareText("server name", "localhost"));
     parameters.addParameter(csapex::param::ParameterFactory::declareText("server port", "2342"));
-    parameters.addParameter(csapex::param::ParameterFactory::declareText("method", "default"));
 
-    parameters.addParameter(csapex::param::ParameterFactory::declareRange("generations", -1, 1024, -1, 1), [this](param::Parameter* p) {
-        generations_ = p->as<int>();
-        if(generations_ == -1) {
-            progress_generation_->setProgress(0, 0);
-        } else {
-            progress_generation_->setProgress(generation_, generations_);
-        }
+    std::map<std::string, int> methods {
+        {"Differential Evolution", (int) Method::DE},
+        {"Genetic Algorithm", (int) Method::GA}
+    };
+    parameters.addParameter(csapex::param::ParameterFactory::declareParameterSet("method", methods, (int) Method::DE),
+                            [this](param::Parameter* p){
+        updateOptimizer();
     });
-    parameters.addParameter(csapex::param::ParameterFactory::declareRange("individuals/initial", 60, 60, 60, 1), individuals_initial_);
-    parameters.addParameter(csapex::param::ParameterFactory::declareRange("individuals/later", 30, 30, 30, 1), individuals_later_);
-
-
-    csapex::param::Parameter::Ptr pg = csapex::param::ParameterFactory::declareOutputProgress("generation");
-    progress_generation_ = dynamic_cast<param::OutputProgressParameter*>(pg.get());
-    parameters.addParameter(pg);
-    csapex::param::Parameter::Ptr pp = csapex::param::ParameterFactory::declareOutputProgress("population");
-    progress_individual_ = dynamic_cast<param::OutputProgressParameter*>(pp.get());
-    parameters.addParameter(pp);
 }
 
 bool EvaOptimizer::generateNextParameterSet()
 {
-    // initilization?
-    if(!client_) {
-        tryMakeSocket();
-
-        if(!client_) {
-            aerr << "couldn't create client" << std::endl;
-            node_modifier_->setError("no client");
-            return false;
-        } else {
-            ainfo << "client initialized" << std::endl;
-        }
-
-        if(!client_->isConnected()) {
-            if(!client_->connect()) {
-                aerr << "could not connect to EvA2" << std::endl;
-                throw std::runtime_error("Couldn't connect!");
-                client_.reset();
-            }
-        }
-
-        // connect to eva
-        SocketMsg::Ptr res;
-        if(client_->read(res)) {
-            ErrorMsg::Ptr err = std::dynamic_pointer_cast<ErrorMsg>(res);
-            VectorMsg<char>::Ptr welcome = std::dynamic_pointer_cast<VectorMsg<char> >(res);
-
-            if(err) {
-                client_.reset();
-
-                std::stringstream ss;
-                ss << "Got error [ " << err->get() << " ]";
-                throw std::runtime_error(ss.str());
-            }
-
-            if(welcome) {
-                //                ainfo << "connection established: " << std::string(welcome->begin(), welcome->end()) << std::endl;
-
-                // generate request
-                YAML::Node description = makeRequest();
-                //                ainfo << "optimization request:\n" << description << std::endl;
-
-                // send parameter description
-                SocketMsg::Ptr res;
-                VectorMsg<char>::Ptr config(new VectorMsg<char>);
-                std::stringstream config_ss;
-                config_ss << description;
-
-                std::string yaml = config_ss.str();
-                config->assign(yaml.data(), yaml.size());
-
-                ainfo << "write config " << std::endl;
-                client_->write(config);
-
-                handleResponse();
-
-            } else {
-                aerr << "didn't receive a welcome message" << std::endl;
-                client_.reset();
-            }
-        } else {
-            aerr << "socket error" << std::endl;
-            client_.reset();
-            throw std::runtime_error("socket error");
-        }
-    }
+    apex_assert(optimizer_);
 
     if(!client_) {
         aerr << "connection lost" << std::endl;
@@ -136,65 +62,7 @@ bool EvaOptimizer::generateNextParameterSet()
     return true;
 }
 
-void EvaOptimizer::updateParameters(const cslibs_jcppsocket::VectorMsg<double>::Ptr& values)
-{
-    if(!values) {
-        return;
-    }
 
-    std::vector<csapex::param::Parameter::Ptr> supported_params;
-
-    for(csapex::param::Parameter::Ptr p : getPersistentParameters()) {
-        // TODO: support more types
-        param::RangeParameter::Ptr range = std::dynamic_pointer_cast<param::RangeParameter>(p);
-        if(range) {
-            if(range->is<double>()) {
-                supported_params.push_back(p);
-
-            } else if(range->is<int>()) {
-                supported_params.push_back(p);
-            }
-        }
-
-        param::IntervalParameter::Ptr interval = std::dynamic_pointer_cast<param::IntervalParameter>(p);
-        if(interval && interval->is<std::pair<int, int>>()) {
-            supported_params.push_back(p);
-            supported_params.push_back(p);
-        }
-    }
-
-    if(values->size() != supported_params.size()) {
-        client_.reset();
-        std::stringstream msg;
-        msg << "number of parameters is wrong: " << values->size() << " vs. " << supported_params.size() << std::endl;
-        throw std::runtime_error(msg.str());
-    }
-
-    // set parameter values to the values specified by eva
-    for(std::size_t i = 0; i < supported_params.size(); ++i) {
-        csapex::param::Parameter::Ptr p = supported_params[i];
-
-        param::IntervalParameter::Ptr interval = std::dynamic_pointer_cast<param::IntervalParameter>(p);
-        if(interval) {
-            auto low = interval;
-            auto high = std::dynamic_pointer_cast<param::IntervalParameter>(supported_params[i]);
-
-            if(!high) {
-                aerr << "cannot deserialize interval..." << std::endl;
-            } else {
-                p->set<std::pair<int, int>>(std::pair<int, int>(values->at(i), values->at(i+1)));
-            }
-            ++i;
-
-        } else {
-            if(p->is<int>()) {
-                p->set<int>(values->at(i));
-            } else {
-                p->set<double>(values->at(i));
-            }
-        }
-    }
-}
 
 void EvaOptimizer::requestNewValues(double fitness)
 {
@@ -239,17 +107,11 @@ void EvaOptimizer::handleResponse()
     VectorMsg<char>::Ptr continue_question = std::dynamic_pointer_cast<VectorMsg<char> >(res);
     if(continue_question) {
         VectorMsg<char>::Ptr continue_answer(new VectorMsg<char>);
-        if(generations_ == -1 || generation_++ < generations_) {
+        if(optimizer_->canContinue()) {
             continue_answer->assign("continue",8);
             client_->write(continue_answer);
 
-            if(generations_ == -1) {
-                progress_generation_->setProgress(0, 0);
-            } else {
-                progress_generation_->setProgress(generation_, generations_);
-            }
-
-            individual_ = 0;
+            optimizer_->nextIteration();
 
             requestNewValues(fitness_);
             handleResponse();
@@ -258,96 +120,140 @@ void EvaOptimizer::handleResponse()
             continue_answer->assign("terminate",9);
             client_->write(continue_answer);
 
-            progress_generation_->setProgress(generations_, generations_);
+            optimizer_->terminate();
         }
 
         return;
     }
 
+    apex_assert(optimizer_);
 
-    // read a set of parameters
-    VectorMsg<double>::Ptr values = std::dynamic_pointer_cast<VectorMsg<double> >(res);
-    if(!values) {
+    try {
+        optimizer_->decodeParameters(res, getPersistentParameters());
+    } catch(...) {
         client_.reset();
-        throw std::runtime_error("didn't get parameters");
+        throw;
     }
-
-    current_parameter_set_  = values;
-
-    updateParameters(current_parameter_set_);
 }
 
 void EvaOptimizer::finish()
 {
-    ++individual_;
-    progress_individual_->setProgress(individual_, generation_ > 0 ? individuals_later_ : individuals_initial_);
+    if(optimizer_) {
+        optimizer_->finish();
+    }
 
     Optimizer::finish();
 }
 
-YAML::Node EvaOptimizer::makeRequest()
-{
-    YAML::Node req;
-    // TODO: define which are possible
-    req["method"] = readParameter<std::string>("method");
-
-    for(csapex::param::Parameter::Ptr p : getPersistentParameters()) {
-        param::RangeParameter::Ptr range = std::dynamic_pointer_cast<param::RangeParameter>(p);
-        if(range) {
-            if(range->is<double>()) {
-                YAML::Node param_node;
-                param_node["name"] = p->name();
-                param_node["type"] = "double/range";
-                param_node["min"] = range->min<double>();
-                param_node["max"] = range->max<double>();
-                param_node["step"] = range->step<double>();
-
-                req["params"].push_back(param_node);
-                continue;
-
-            } else if(range->is<int>()) {
-                YAML::Node param_node;
-                param_node["name"] = p->name();
-                param_node["type"] = "double/range";
-                param_node["min"] = (double) range->min<int>();
-                param_node["max"] = (double)range->max<int>();
-                param_node["step"] = (double)range->step<int>();
-
-                req["params"].push_back(param_node);
-                continue;
-            }
-        }
-
-        param::IntervalParameter::Ptr interval = std::dynamic_pointer_cast<param::IntervalParameter>(p);
-        if(interval && interval->is<std::pair<int, int>>()) {
-            YAML::Node node_low;
-            node_low["name"] = p->name();
-            node_low["type"] = "double/range";
-            node_low["min"] = (double) interval->min<int>();
-            node_low["max"] = (double) interval->max<int>();
-            node_low["step"] = (double) interval->step<int>();
-
-            YAML::Node node_high;
-            node_high["name"] = p->name();
-            node_high["type"] = "double/range";
-            node_high["min"] = (double) interval->min<int>();
-            node_high["max"] = (double) interval->max<int>();
-            node_high["step"] = (double) interval->step<int>();
-
-            req["params"].push_back(node_low);
-            req["params"].push_back(node_high);
-            continue;
-        }
-    }
-    return req;
-}
 
 void EvaOptimizer::reset()
 {
-    generation_ = 0;
-    individual_ = 0;
+    if(optimizer_) {
+        optimizer_->reset();
+    }
 }
 
+void EvaOptimizer::start()
+{
+    // initilization?
+    if(!client_) {
+        tryMakeSocket();
+
+        if(!client_) {
+            throw std::runtime_error("couldn't create client");
+        } else {
+            ainfo << "client initialized" << std::endl;
+        }
+
+        if(!client_->isConnected()) {
+            if(!client_->connect()) {
+                aerr << "could not connect to EvA2" << std::endl;
+                throw std::runtime_error("Couldn't connect!");
+                client_.reset();
+            }
+        }
+
+        // connect to eva
+        SocketMsg::Ptr res;
+        if(client_->read(res)) {
+            ErrorMsg::Ptr err = std::dynamic_pointer_cast<ErrorMsg>(res);
+            VectorMsg<char>::Ptr welcome = std::dynamic_pointer_cast<VectorMsg<char> >(res);
+
+            if(err) {
+                client_.reset();
+
+                std::stringstream ss;
+                ss << "Got error [ " << err->get() << " ]";
+                throw std::runtime_error(ss.str());
+            }
+
+            if(welcome) {
+                //                ainfo << "connection established: " << std::string(welcome->begin(), welcome->end()) << std::endl;
+
+                // generate request
+                YAML::Node description;
+                description["method"] = optimizer_->getName();
+
+                YAML::Node options;
+                optimizer_->getOptions(options);
+                description["options"] = options;
+
+                optimizer_->encodeParameters(getPersistentParameters(), description);
+                //                ainfo << "optimization request:\n" << description << std::endl;
+
+                // send parameter description
+                SocketMsg::Ptr res;
+                VectorMsg<char>::Ptr config(new VectorMsg<char>);
+                std::stringstream config_ss;
+                config_ss << description;
+
+                std::string yaml = config_ss.str();
+                config->assign(yaml.data(), yaml.size());
+
+                ainfo << "write config " << std::endl;
+                client_->write(config);
+
+                handleResponse();
+
+            } else {
+                aerr << "didn't receive a welcome message" << std::endl;
+                client_.reset();
+            }
+        } else {
+            aerr << "socket error" << std::endl;
+            client_.reset();
+            throw std::runtime_error("socket error");
+        }
+    }
+
+    Optimizer::start();
+}
+
+void EvaOptimizer::updateOptimizer()
+{
+    Method method = static_cast<Method>(readParameter<int>("method"));
+
+    if(method_ != method) {
+        method_ = method;
+
+        if(optimizer_) {
+            stop();
+            optimizer_.reset();
+        }
+
+        removeTemporaryParameters();
+
+        switch(method_) {
+        default:
+        case Method::DE:
+            optimizer_ = std::make_shared<OptimizerDE>();
+
+            break;
+        }
+
+        optimizer_->addParameters(*this);
+    }
+}
 
 void EvaOptimizer::tryMakeSocket()
 {
