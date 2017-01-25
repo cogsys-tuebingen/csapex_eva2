@@ -35,14 +35,14 @@ void EvaOptimizer::setupParameters(Parameterizable& parameters)
 {
     Optimizer::setupParameters(parameters);
 
-    parameters.addParameter(csapex::param::ParameterFactory::declareText("server name", "localhost"));
-    parameters.addParameter(csapex::param::ParameterFactory::declareText("server port", "2342"));
+    parameters.addParameter(param::ParameterFactory::declareText("server name", "localhost"));
+    parameters.addParameter(param::ParameterFactory::declareText("server port", "2342"));
 
     std::map<std::string, int> methods {
         {"Differential Evolution", (int) Method::DE},
         {"Genetic Algorithm", (int) Method::GA}
     };
-    parameters.addParameter(csapex::param::ParameterFactory::declareParameterSet("method", methods, (int) Method::DE),
+    parameters.addParameter(param::ParameterFactory::declareParameterSet("method", methods, (int) Method::DE),
                             [this](param::Parameter* p){
         updateOptimizer();
     });

@@ -100,11 +100,9 @@ std::size_t getNrOfBits(const csapex::param::Parameter* p)
     }
     if(auto valname = dynamic_cast<const param::ValueParameter*>(p)){
         if(valname->is<double>()){
-
             return 64;
         }
         else if(valname->is<int>()){
-
             return 32;
         }
         else if(valname->is<bool>()){
@@ -145,6 +143,52 @@ int readParameterValue(csapex::param::Parameter* p, const char* buffer, int firs
 
             p->set<double>(value);
         }
+        else if(range->is<int>()){
+            int min = range->min<int>();
+            int max = range->max<int>();
+            int step = range->step<int>();
+
+            std::size_t steps = std::ceil((max-min)/step);
+
+            int value = min + ((result % steps) * step);
+
+            apex_assert(value >= min);
+            apex_assert(value <= max);
+
+            p->set<int>(value);
+        }
+        else {
+            throw std::runtime_error(std::string("unsupported parameter type ") + p->type2string(p->type()) );
+        }
+    }
+    else if(auto value = dynamic_cast<param::ValueParameter*>(p)){
+        if(p->is<bool>()) {
+            std::size_t byte = (first_bit) / 8;
+            std::size_t bit = (first_bit) % 8;
+
+            bool entry = buffer[byte] & (1 << bit);
+            p->set<bool>(entry);
+        }
+        else if(p->is<int>()) {
+            int result = 0;
+            for(int b = 0; b < len; ++b) {
+                std::size_t byte = (first_bit + b) / 8;
+                std::size_t bit = (first_bit + b) % 8;
+
+                bool entry = buffer[byte] & (1 << bit);
+                if(entry) {
+                    result += std::pow(2, b);
+                }
+            }
+            std::cerr << "read int " << result << std::endl;;
+            p->set<int>(result);
+        }
+        else {
+            throw std::runtime_error(std::string("unsupported parameter type ") + p->type2string(p->type()) );
+        }
+    }
+    else {
+        throw std::runtime_error(std::string("unsupported parameter type ") + p->type2string(p->type()) );
     }
     return len;
 }
