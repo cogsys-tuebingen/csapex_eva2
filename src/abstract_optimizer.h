@@ -33,10 +33,12 @@ public:
                                   const std::vector<param::ParameterPtr> &params) = 0;
 
 
-    virtual void reset() = 0;
-    virtual void finish();
+    virtual void reset();
+    virtual void finish(double fitness, double best_fitness, double worst_fitness);
 
 protected:
+    param::OutputProgressParameter* progress_fitness_;
+
     param::OutputProgressParameter* progress_individual_;
     int individual_;
     int individuals_;

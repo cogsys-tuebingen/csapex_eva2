@@ -55,10 +55,11 @@ bool OptimizerDE::canContinue() const
 
 void OptimizerDE::nextIteration()
 {
+    ++generation_;
+
     if(generations_ == -1) {
         progress_generation_->setProgress(0, 0);
     } else {
-        ++generation_;
         progress_generation_->setProgress(generation_, generations_);
     }
 
@@ -191,12 +192,14 @@ void OptimizerDE::decodeParameters(const cslibs_jcppsocket::SocketMsg::Ptr &msg,
 
 void OptimizerDE::reset()
 {
+    AbstractOptimizer::reset();
+
     generation_ = 0;
     individual_ = 0;
 }
 
-void OptimizerDE::finish()
+void OptimizerDE::finish(double fitness, double best_fitness, double worst_fitness)
 {
-    AbstractOptimizer::finish();
+    AbstractOptimizer::finish(fitness, best_fitness, worst_fitness);
     progress_individual_->setProgress(individual_, generation_ > 0 ? individuals_later_ : individuals_);
 }

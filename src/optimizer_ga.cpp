@@ -255,12 +255,14 @@ void OptimizerGA::decodeParameters(const cslibs_jcppsocket::SocketMsg::Ptr &msg,
 
 void OptimizerGA::reset()
 {
+    AbstractOptimizer::reset();
+
     generation_ = 0;
     individual_ = 0;
 }
 
-void OptimizerGA::finish()
+void OptimizerGA::finish(double fitness, double best_fitness, double worst_fitness)
 {
-    AbstractOptimizer::finish();
+    AbstractOptimizer::finish(fitness, best_fitness, worst_fitness);
     progress_individual_->setProgress(individual_, generation_ > 0 ? individuals_later_ : individuals_);
 }

@@ -27,7 +27,7 @@ public:
                           const std::vector<param::ParameterPtr> &params) override;
 
     void reset() override;
-    void finish() override;
+    void finish(double fitness, double best_fitness, double worst_fitness) override;
 
 private:
     cslibs_jcppsocket::VectorMsg<double>::Ptr current_parameter_set_;

@@ -141,11 +141,11 @@ void EvaOptimizer::handleResponse()
 
 void EvaOptimizer::finish()
 {
-    if(optimizer_) {
-        optimizer_->finish();
-    }
-
     Optimizer::finish();
+
+    if(optimizer_) {
+        optimizer_->finish(fitness_, best_fitness_, worst_fitness_);
+    }
 }
 
 
