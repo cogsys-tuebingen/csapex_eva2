@@ -180,7 +180,6 @@ int readParameterValue(csapex::param::Parameter* p, const char* buffer, int firs
                     result += std::pow(2, b);
                 }
             }
-            std::cerr << "read int " << result << std::endl;;
             p->set<int>(result);
         }
         else {
