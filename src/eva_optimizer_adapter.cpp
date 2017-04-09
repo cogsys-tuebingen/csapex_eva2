@@ -9,7 +9,7 @@ using namespace csapex;
 CSAPEX_REGISTER_NODE_ADAPTER(EvaOptimizerAdapter, csapex::EvaOptimizer)
 
 
-EvaOptimizerAdapter::EvaOptimizerAdapter(NodeHandleWeakPtr worker, NodeBox* parent, std::weak_ptr<EvaOptimizer> node)
+EvaOptimizerAdapter::EvaOptimizerAdapter(NodeFacadeWeakPtr worker, NodeBox* parent, std::weak_ptr<EvaOptimizer> node)
     : OptimizerAdapter(worker, parent, node), wrapped_(node)
 {
 }
