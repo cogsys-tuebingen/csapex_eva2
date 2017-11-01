@@ -16,7 +16,7 @@ class EvaOptimizerAdapter : public OptimizerAdapter
     Q_OBJECT
 
 public:
-    EvaOptimizerAdapter(NodeFacadeWeakPtr worker, NodeBox* parent, std::weak_ptr<EvaOptimizer> node);
+    EvaOptimizerAdapter(NodeFacadeLocalPtr worker, NodeBox* parent, std::weak_ptr<EvaOptimizer> node);
     ~EvaOptimizerAdapter();
 
 

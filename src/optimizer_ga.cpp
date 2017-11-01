@@ -161,7 +161,7 @@ int readParameterValue(csapex::param::Parameter* p, const char* buffer, int firs
             throw std::runtime_error(std::string("unsupported parameter type ") + p->type2string(p->type()) );
         }
     }
-    else if(auto value = dynamic_cast<param::ValueParameter*>(p)){
+    else if(dynamic_cast<param::ValueParameter*>(p)){
         if(p->is<bool>()) {
             std::size_t byte = (first_bit) / 8;
             std::size_t bit = (first_bit) % 8;
